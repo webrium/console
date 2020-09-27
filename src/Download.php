@@ -4,7 +4,7 @@ namespace webrium\component;
 class Download{
 
 
-    public static function url($url,$progress=false)
+    public static function url($url,$save_path,&$progress=false)
     {
         $file_name = basename($url);
         $curl = curl_init();
@@ -13,12 +13,16 @@ class Download{
         curl_setopt($curl, CURLOPT_FOLLOWLOCATION, 1);
         curl_setopt($curl, CURLOPT_URL, $url);
 
-        curl_setopt($curl, CURLOPT_PROGRESSFUNCTION, function ($resource, $download_size, $downloaded, $upload_size, $uploaded) use($progress, $file_name)
-        {
-            if ($progress && $download_size > 0){
-                $progress(($downloaded / $download_size  * 100), $file_name);
-            }
-        });
+        if($progress){
+            curl_setopt($curl, CURLOPT_PROGRESSFUNCTION, function ($resource, $download_size, $downloaded, $upload_size, $uploaded) use($progress, $file_name)
+            {
+                if ($progress && $download_size > 0){
+                    $progress(($downloaded / $download_size  * 100), $file_name);
+                }
+            });
+        }
+
+
         curl_setopt($curl, CURLOPT_NOPROGRESS, false); // needed to make progress function work
 
         curl_setopt($curl, CURLOPT_USERAGENT, 'Component');
@@ -35,7 +39,7 @@ class Download{
             echo "cURL Error #:" . $err;
         }
 
-        $fp = fopen($file_name, "wb");
+        $fp = fopen("$save_path/$file_name", "wb");
         fwrite($fp, $content);
         fclose($fp);
         
