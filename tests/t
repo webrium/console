@@ -1,0 +1,30 @@
+#!/usr/bin/env php
+<?php
+// application.php
+
+require __DIR__.'/../vendor/autoload.php';
+
+use webrium\core\App;
+use Symfony\Component\Console\Application;
+
+use webrium\component\GenerateModel;
+use webrium\component\GenerateController;
+// use webrium\component\Download;
+use webrium\component\DownloadUIBootstrap;
+
+// Download::url('https://github.com/twbs/bootstrap/releases/download/v4.5.2/bootstrap-4.5.2-dist.zip',function ($p)
+// {
+//     echo "$p\n>";
+// });
+
+// echo 'end';
+App::rootPath(__DIR__);
+
+$application = new Application();
+
+// // ... register commands
+$application->add(new GenerateModel());
+$application->add(new GenerateController());
+$application->add(new DownloadUIBootstrap());
+
+$application->run();
