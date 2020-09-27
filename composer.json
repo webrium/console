@@ -1,0 +1,17 @@
+{
+    "name": "webrium/component",
+    "type": "library",
+    "description": "",
+    "authors": [
+        {
+            "name": "سید بنیامین خلیفه",
+            "email": "nvioir@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "webrium\\component\\": "src/"
+        }
+    }
+}
