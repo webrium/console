@@ -8,6 +8,9 @@
             "email": "nvioir@gmail.com"
         }
     ],
+    "require":{
+      "symfony/console": "^5.2@dev"
+    },
     "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
