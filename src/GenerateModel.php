@@ -37,12 +37,12 @@ class GenerateModel extends Command
 
         $s->writeln('Creating a model file ..');
 
-        File::putContent(__DIR__."/$name.php", $this->getBasicStr($name));
+        File::putContent("$model_dir/$name.php", $this->getBasicStr($name));
 
         sleep(2);
 
         $s->overwrite("Model created");
-        $s->writeln("path : <info>$model_dir/$name</info>");
+        $s->writeln("path : <info>$model_dir/$name.php</info>");
 
         return Command::SUCCESS;
     }
