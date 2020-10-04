@@ -10,6 +10,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use webrium\core\File;
 use webrium\core\Directory;
 use webrium\component\Download;
+use webrium\component\Zip;
 
 class DownloadUIBootstrap extends Command
 {
@@ -36,7 +37,7 @@ class DownloadUIBootstrap extends Command
         }
 
 
-        
+
     }
 
     private function initView($name,$output){
@@ -82,40 +83,37 @@ class DownloadUIBootstrap extends Command
 
         $url= 'https://github.com/twbs/bootstrap/releases/download/v4.5.2/bootstrap-4.5.2-dist.zip';
         $file_name = basename($url);
-
         $save_path = Directory::path('storage').'/temp';
         Directory::make($save_path);
 
         $output->writeln("Downloading $file_name\n");
-
         $status = Download::url($url,$save_path);
 
-        // if($status != 200){
-
-        // }
+        if($status != 200){
+          Download::error($output);
+        }
 
         $extract_to = Directory::path('public')."/library/";
-        
+
         $output->writeln("Extract $file_name to $extract_to");
 
-        $zip = new \ZipArchive;
-        if ($zip->open("$save_path/$file_name") === TRUE) {
-            $zip->extractTo($extract_to);
-            $zip->close();
-            rename("$extract_to/bootstrap-4.5.2-dist","$extract_to/bootstrap");
-        } else {
+        Zip::extract("$save_path/$file_name",$extract_to);
+        $s = rename("$extract_to/bootstrap-4.5.2-dist","$extract_to/bootstrap");
+
+        if (! $s) {
+          $output->writeln("<error>Already 'bootstrap' directory is exist.please delete old 'bootstrap' directory and try again</error>");
+          die;
         }
 
         File::delete("$save_path/$file_name");
+
         $output->writeln("Clear temp files");
         $output->writeln("----------------\n");
-
-        
+        $output->writeln("installation path : $extract_to");
         $output->writeln("<info>Installation completed</info>");
 
         return Command::SUCCESS;
-
     }
 
-   
+
 }
