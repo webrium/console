@@ -10,6 +10,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use webrium\core\File;
 use webrium\core\Directory;
 use webrium\component\Download;
+use webrium\component\Zip;
 
 class DownloadUIJquery extends Command
 {
@@ -31,32 +32,40 @@ class DownloadUIJquery extends Command
         if($action=='install'){
             return $this->install($arg,$output);
         }
-
-
-
-
     }
 
     private function install($v=false,$output){
 
-        $url= '';
+        $url;
+        $orginal_name;
+
         if ($v=='3' || $v==false || $v==null) {
           $url='https://webrium.ir/content/components/jquery-3.5.1.min.zip';
+          $orginal_name = 'jquery-3.5.1.min.js';
         }
         elseif ($v=='2') {
           $url='https://webrium.ir/content/components/jquery-2.2.4.min.zip';
+          $orginal_name = 'jquery-2.2.4.min.js';
         }
         elseif ($v=='1') {
           $url='https://webrium.ir/content/components/jquery-1.12.4.min.zip';
+          $orginal_name = 'jquery-1.12.4.min.js';
         }
         elseif ($v=='slim') {
           $url="https://webrium.ir/content/components/jquery-3.5.1.slim.zip";
+          $orginal_name = 'jquery-3.5.1.slim.js';
         }
         elseif ($v=='migrate') {
           $url='https://webrium.ir/content/components/jquery-migrate-3.3.1.min.zip';
+          $orginal_name = 'jquery-migrate-3.3.1.min.js';
         }
         elseif ($v=='ui') {
           $url='https://webrium.ir/content/components/jquery-ui.min-1.12.zip';
+          $orginal_name = 'jquery-ui.min.js';
+        }
+        else {
+          $output->writeln("<error>install $v not found.</error>");
+          die;
         }
 
         $file_name = basename($url);
@@ -68,25 +77,24 @@ class DownloadUIJquery extends Command
 
         $status = Download::url($url,$save_path);
 
-        // if($status != 200){
-
-        // }
+        if($status != 200){
+          Download::error($output);
+        }
 
         $extract_to = Directory::path('public')."/library/jquery/";
 
         $output->writeln("Extract $file_name to $extract_to");
 
-        $zip = new \ZipArchive;
-        if ($zip->open("$save_path/$file_name") === TRUE) {
-            $zip->extractTo($extract_to);
-            $zip->close();
-        } else {
-        }
+        Zip::extract("$save_path/$file_name",$extract_to);
 
         File::delete("$save_path/$file_name");
         $output->writeln("Clear temp files");
         $output->writeln("----------------\n");
 
+        $output->writeln("=======================Guide=======================");
+        $output->writeln("<comment>".'<script src="{{ url(\'library/jquery/'.$orginal_name.'\') }}" charset="utf-8"></script>'."</comment>");
+        $output->writeln("===================================================");
+        $output->writeln("\n");
 
         $output->writeln("<info>Installation completed</info>");
 
