@@ -26,8 +26,8 @@ class Download{
         curl_setopt($curl, CURLOPT_NOPROGRESS, false); // needed to make progress function work
 
         curl_setopt($curl, CURLOPT_USERAGENT, 'Component');
-        
-        
+
+
         $content = curl_exec($curl);
         $http_status = curl_getinfo($curl, CURLINFO_HTTP_CODE);
 
@@ -42,8 +42,18 @@ class Download{
         $fp = fopen("$save_path/$file_name", "wb");
         fwrite($fp, $content);
         fclose($fp);
-        
+
         return $http_status;
+    }
+
+    public static function error($output,$message='Download failed. Please check your connection',$die=true)
+    {
+      $output->writeln("\n");
+      $output->writeln("<error>$message</error>");
+
+      if($die){
+        die;
+      }
     }
 
 }
