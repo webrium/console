@@ -1,6 +1,7 @@
 # component
 
 Install
+
 ``
 composer require webrium/component
 ``
