@@ -52,8 +52,8 @@ class DownloadUIJquery extends Command
           $orginal_name = 'jquery-1.12.4.min.js';
         }
         elseif ($v=='slim') {
-          $url="https://webrium.ir/content/components/jquery-3.5.1.slim.zip";
-          $orginal_name = 'jquery-3.5.1.slim.js';
+          $url="https://webrium.ir/content/components/jquery-3.5.1.slim.min.zip";
+          $orginal_name = 'jquery-3.5.1.slim.min.js';
         }
         elseif ($v=='migrate') {
           $url='https://webrium.ir/content/components/jquery-migrate-3.3.1.min.zip';
