@@ -1,10 +1,11 @@
 # component
 
-Install
+##Install
 
-``
-composer require webrium/component
-``
+```
+$ composer require webrium/component
+$ php -r "copy('vendor/webrium/component/src/webrium','webrium');"
+```
 
 
 ### bootstrap
