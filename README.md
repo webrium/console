@@ -9,7 +9,7 @@ $ php -r "copy('vendor/webrium/component/src/webrium','webrium');"
 
 ## CSS Frameworks
 
-### bootstrap
+### Bootstrap
 
 install bootstrap source 
 ```
@@ -67,4 +67,3 @@ php webrium ui:jquery install migrate
 php webrium ui:jquery install ui
 ```
 
-### 
