@@ -18,21 +18,8 @@
         }
     },
     "scripts": {
-        "post-update-cmd": "MyVendor\\MyClass::postUpdate",
         "post-package-install": [
-            "php -r \"echo 'post-package-install';\""
-        ],
-        "post-install-cmd": [
-            "php -r \"echo 'post-install-cmd';\""
-        ],
-        "post-autoload-dump": [
-            "php -r \"echo 'post-autoload-dump';\""
-        ],
-        "post-create-project-cmd": [
-            "php -r \"echo 'post-create-project-cmd';\""
-        ],
-        "post-file-download":[
-            "php -r \"echo 'post-file-download';\""
+            "php -r \"copy('src/webrium', realpath('../../../webrium'));\""
         ]
     }
 }
