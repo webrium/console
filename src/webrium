@@ -8,11 +8,18 @@ $application = new Application();
 
 use webrium\component\DownloadUIBootstrap;
 use webrium\component\DownloadUIKit;
+use webrium\component\DownloadUIJquery;
+use webrium\component\GenerateController;
+use webrium\component\GenerateModel;
+
 use webrium\core\App;
 
 App::rootPath(__DIR__);
 
 $application->add(new DownloadUIBootstrap());
 $application->add(new DownloadUIKit());
+$application->add(new DownloadUIJquery());
+$application->add(new GenerateController());
+$application->add(new GenerateModel());
 
 $application->run();
