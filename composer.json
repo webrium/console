@@ -16,10 +16,5 @@
         "psr-4": {
             "webrium\\component\\": "src/"
         }
-    },
-    "scripts": {
-        "post-package-install": [
-            "php -r \"copy('src/webrium', realpath('../../../webrium'));\""
-        ]
     }
 }
