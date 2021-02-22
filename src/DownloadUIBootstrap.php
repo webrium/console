@@ -81,7 +81,7 @@ class DownloadUIBootstrap extends Command
 
     private function install($v=false,$output){
 
-        $url= 'https://github.com/twbs/bootstrap/releases/download/v4.5.2/bootstrap-4.5.2-dist.zip';
+        $url= 'https://github.com/twbs/bootstrap/releases/download/v4.6.0/bootstrap-4.6.0-dist.zip';
         $file_name = basename($url);
         $save_path = Directory::path('storage').'/temp';
         Directory::make($save_path);
@@ -98,7 +98,7 @@ class DownloadUIBootstrap extends Command
         $output->writeln("Extract $file_name to $extract_to");
 
         Zip::extract("$save_path/$file_name",$extract_to);
-        $s = rename("$extract_to/bootstrap-4.5.2-dist","$extract_to/bootstrap");
+        $s = rename("$extract_to/bootstrap-4.6.0-dist","$extract_to/bootstrap");
 
         if (! $s) {
           $output->writeln("<error>Already 'bootstrap' directory is exist.please delete old 'bootstrap' directory and try again</error>");
