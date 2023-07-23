@@ -1,5 +1,5 @@
 <?php
-namespace webrium\component;
+namespace Webrium\component;
 
 
 use Symfony\Component\Console\Command\Command;
@@ -7,13 +7,13 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 
-use webrium\core\File;
-use webrium\core\Directory;
+use Webrium\File;
+use Webrium\Directory;
 
 class GenerateController extends Command
 {
     // the name of the command (the part after "bin/console")
-    protected static $defaultName = 'controller:make';
+    protected static $defaultName = 'make:controller';
 
     protected function configure()
     {
@@ -25,6 +25,10 @@ class GenerateController extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $name = $input->getArgument('name');
+
+        if(strpos($name, "Controller")===false){
+            $name = $name."Controller";
+        }
 
         $model_dir = Directory::path('controllers');
 
@@ -41,14 +45,14 @@ class GenerateController extends Command
 
         sleep(2);
 
-        $s->overwrite("Model created");
+        $s->overwrite("Controller created");
         $s->writeln("path : <info>$model_dir/$name.php</info>");
 
         return Command::SUCCESS;
     }
 
     private function getBasicStr($name){
-        return "<?php\nnamespace app\controllers;\n\nclass $name{\n//..\n\n}";
+        return "<?php\nnamespace App\Controllers;\n\nclass $name{\n//..\n\n}";
     }
 
    

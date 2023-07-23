@@ -7,13 +7,13 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 
-use webrium\core\File;
-use webrium\core\Directory;
+use Webrium\File;
+use Webrium\Directory;
 
 class GenerateModel extends Command
 {
     // the name of the command (the part after "bin/console")
-    protected static $defaultName = 'model:make';
+    protected static $defaultName = 'make:model';
 
     protected function configure()
     {
@@ -48,7 +48,7 @@ class GenerateModel extends Command
     }
 
     private function getBasicStr($name){
-        return "<?php\nnamespace app\models;\n\nclass $name{\n//..\n\n}";
+        return "<?php\nnamespace App\Models;\n\nclass $name{\n//..\n\n}";
     }
 
    
