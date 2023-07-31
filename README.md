@@ -7,63 +7,15 @@ $ composer require webrium/component
 $ php -r "copy('vendor/webrium/component/src/webrium','webrium');"
 ```
 
-## CSS Frameworks
+## Init Telegram bot
 
-### Bootstrap
-
-install bootstrap source 
 ```
-php webrium ui:bootstrap install
+php webrium botfire:init your_bot_api_token
 ```
 
-make sample view
-```
-php webrium ui:bootstrap init-view file_name
-```
+You can also enable debug mode as below
 
-
-### UIKit
-
-
-install UIKit source
 ```
-php webrium ui:kit install
+php webrium botfire:init your_bot_api_token --debug=your_chat_id
 ```
-
-make sample view
-```
-php webrium ui:kit init-view file_name
-```
-
-## JQuery
-
-### Complete version (3.5.1.min)
-```
-php webrium ui:jquery install
-```
-
-### Slim Version (3.5.1.min)
-```
-php webrium ui:jquery install slim
-```
-
-### Version 2
-```
-php webrium ui:jquery install 2
-```
-
-### Version 1
-```
-php webrium ui:jquery install 1
-```
-
-### Migrate
-```
-php webrium ui:jquery install migrate
-```
-
-### Jquery UI (1.12)
-```
-php webrium ui:jquery install ui
-```
-
+By activating debug mode, when an error occurs, its text will be sent to your account instantly
