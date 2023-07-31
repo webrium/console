@@ -6,6 +6,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputOption;
 
 use Webrium\File;
 use Webrium\Directory;
@@ -18,38 +19,70 @@ class GenerateModel extends Command
     protected function configure()
     {
         Directory::initDefaultStructure();
-        $this
-            ->addArgument('name', InputArgument::REQUIRED, 'Who do you want to greet?');
+        $this->addArgument('name', InputArgument::REQUIRED, 'Model Name');
+        $this->addOption('table', null, InputOption::VALUE_OPTIONAL, 'Model table name');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $name = $input->getArgument('name');
+        $table = $input->getOption('table');
 
         $model_dir = Directory::path('models');
+        $root = __DIR__.'/Files/Framework';
 
-        if(!is_dir($model_dir)){
-            $output->writeln("<error>Modles directory not exists\n$model_dir</error>");
+        $model_string = '';
+
+        $class_name = '';
+        $file_name = '';
+
+
+        $class_name = $name;
+        $file_name = "$name.php";
+
+        if($table === null || empty($table) == false){
+
+            $model_string = File::getContent("$root/DbModel.php");
+            $model_string = \str_replace('DbModel', $class_name, $model_string);
+
+            if($table == null){
+                $table = strtolower($name);
+                
+                if(substr($table, strlen($table)-1, 1)!='s'){
+                    $table.='s';
+                }
+            }
+
+            $model_string = \str_replace('model_db', $table, $model_string);
+
+        }
+        else{
+
+            $model_string = File::getContent("$root/SimpleModel.php");
+            $model_string = \str_replace('SimpleModel', $class_name, $model_string);
+        }
+
+
+        $file_path = "$model_dir/$file_name";
+        if(File::exists($file_path)){
+            $output->writeln("<error>ERROR: The '$file_name' model already exists</error>");
             return Command::FAILURE;
         }
+
+        $output->writeln("Model Name: <comment>$class_name</comment>");
         
-        $s = $output->section();
+        if(empty($table)==false){
+            $output->writeln("Model Table: <comment>$table</comment>");
+        }
 
-        $s->writeln('Creating a model file ..');
 
-        File::putContent("$model_dir/$name.php", $this->getBasicStr($name));
+        $output->writeln("<info>The '$file_name' model was created.</info>");
 
-        sleep(2);
 
-        $s->overwrite("Model created");
-        $s->writeln("path : <info>$model_dir/$name.php</info>");
+
+        File::putContent($file_path, $model_string);
 
         return Command::SUCCESS;
     }
-
-    private function getBasicStr($name){
-        return "<?php\nnamespace App\Models;\n\nclass $name{\n//..\n\n}";
-    }
-
    
 }
