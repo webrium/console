@@ -1,5 +1,5 @@
 {
-    "name": "webrium/component",
+    "name": "webrium/console",
     "type": "library",
     "description": "",
     "authors": [
@@ -9,12 +9,13 @@
         }
     ],
     "require":{
-      "symfony/console": "^5.2@dev"
+      "symfony/console": "^5.2@dev",
+      "webrium/core": "^2.0.0"
     },
     "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
-            "webrium\\component\\": "src/"
+            "Webrium\\Console\\": "src/"
         }
     }
 }

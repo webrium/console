@@ -1,5 +1,5 @@
 <?php
-namespace webrium\component;
+namespace Webrium\Console;
 
 
 use Symfony\Component\Console\Command\Command;
@@ -15,6 +15,10 @@ class GenerateModel extends Command
 {
     // the name of the command (the part after "bin/console")
     protected static $defaultName = 'make:model';
+
+    public static function test(){
+        echo 'hi';
+    }
 
     protected function configure()
     {

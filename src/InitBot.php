@@ -1,5 +1,5 @@
 <?php
-namespace webrium\component;
+namespace Webrium\Console;
 
 
 use Symfony\Component\Console\Command\Command;

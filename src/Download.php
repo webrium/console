@@ -1,5 +1,5 @@
 <?php
-namespace webrium\component;
+namespace webrium\console;
 
 class Download{
 

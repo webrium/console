@@ -1,25 +1,22 @@
 <?php
 
-require __DIR__.'/vendor/autoload.php';
+require __DIR__.'/../../../../vendor/autoload.php';
 
 use Symfony\Component\Console\Application;
 
 $application = new Application();
 
-use webrium\component\DownloadUIBootstrap;
-use webrium\component\DownloadUIKit;
-use webrium\component\DownloadUIJquery;
-use webrium\component\GenerateController;
-use webrium\component\GenerateModel;
 
-use webrium\core\App;
+use webrium\console\GenerateController;
+use webrium\console\GenerateModel;
+use webrium\console\InitBot;
 
-App::rootPath(__DIR__);
+use Webrium\App;
 
-$application->add(new DownloadUIBootstrap());
-$application->add(new DownloadUIKit());
-$application->add(new DownloadUIJquery());
+App::rootPath(__DIR__.'/../../../..');
+
 $application->add(new GenerateController());
 $application->add(new GenerateModel());
+$application->add(new InitBot());
 
 $application->run();
