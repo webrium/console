@@ -21,7 +21,8 @@ We use [BotFire](github.com/botfire/botfire/) library for Telegram bot. And usin
 ```
 php webrium botfire:init your_bot_api_token
 ```
-Replace your_bot_api_token with your bot token
+Replace your_bot_api_token with your bot token.
+
 You can also enable debug mode as below
 
 ```
