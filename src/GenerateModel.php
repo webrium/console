@@ -24,7 +24,7 @@ class GenerateModel extends Command
     {
         Directory::initDefaultStructure();
         $this->addArgument('name', InputArgument::REQUIRED, 'Model Name');
-        $this->addOption('table', null, InputOption::VALUE_OPTIONAL, 'Model table name');
+        $this->addOption('table', null, InputOption::VALUE_OPTIONAL, 'Model table name', false);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -44,7 +44,9 @@ class GenerateModel extends Command
         $class_name = $name;
         $file_name = "$name.php";
 
-        if($table === null || empty($table) == false){
+        // die(json_encode($table));
+
+        if($table === null || (empty($table) == false && $table !== false)){
 
             $model_string = File::getContent("$root/DbModel.php");
             $model_string = \str_replace('DbModel', $class_name, $model_string);
