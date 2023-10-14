@@ -107,6 +107,25 @@ class InitBot extends Command
 
         }
 
+        if(File::exists("$app_routes_dir/Web.php")){
+
+            $web_route = File::getContent("$app_routes_dir/Web.php");
+            $web_array = explode("\n", $web_route);
+
+            $find_web_route = false;
+            foreach ($web_array as $key => &$line) {
+                if(strpos($line, '// Added by botfire')!==false){
+                    $find_web_route = true;
+                }
+            }
+
+            if($find_web_route == false){
+                $web_route = $web_route . "\n\n// Added by botfire\n\nRoute::post('bot/run', 'BotController->runCommand');\nRoute::get('bot/webhook/set', 'BotController->setWebhook');\n//Route::get('bot/webhook/get', 'BotController->getWebhook');";
+                File::putContent("$app_routes_dir/Web.php", $web_route);
+                $output->writeln("Added required routes to 'Web.php'");
+            }
+        }
+
         $output->writeln('');
         $output->writeln("Bot initialization completed.");
         return Command::SUCCESS;
