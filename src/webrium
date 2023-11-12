@@ -2,21 +2,33 @@
 
 require __DIR__.'/../../../../vendor/autoload.php';
 
+
+use Webrium\App;
+use Webrium\File;
+use Webrium\Debug;
+use Webrium\Directory;
+
+use Webrium\Console\GenerateModel;
+use Webrium\Console\GenerateController;
+use Webrium\Console\CallController;
+use Webrium\Console\InitBot;
+
 use Symfony\Component\Console\Application;
+
+
+App::root(__DIR__);
+Debug::displayErrors(true);
+Directory::initDefaultStructure();
+
+// Load config
+File::source('config',['Config.php','DB.php', 'Console.php']);
+
 
 $application = new Application();
 
-
-use webrium\console\GenerateController;
-use webrium\console\GenerateModel;
-use webrium\console\InitBot;
-
-use Webrium\App;
-
-App::rootPath(__DIR__.'/../../../..');
-
-$application->add(new GenerateController());
 $application->add(new GenerateModel());
+$application->add(new GenerateController());
 $application->add(new InitBot());
+$application->add(new CallController());
 
 $application->run();
