@@ -53,7 +53,15 @@ class CallController extends Command
 
 
         if (method_exists($controller, $method)) {
-            App::ReturnData($controller->{$method}(...$params));
+
+            $data = $controller->{$method}(...$params);
+
+            if (is_array($data) || is_object($data)) {
+                $data = json_encode($data);
+            }
+
+            $output->writeln("<info>$data</info>");
+
         } else {
             Command::FAILURE;
             $output->writeln("<error>Method $method not found in $class.php</error>");
@@ -63,8 +71,6 @@ class CallController extends Command
         if (method_exists($controller, '__end')) {
             $controller->__end();
         }
-
-        echo "\n";
 
         return Command::SUCCESS;
     }
