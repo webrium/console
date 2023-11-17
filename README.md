@@ -39,7 +39,7 @@ In the example below, the `AuthController.php` file is created
 php webrium make:controller Auth
 ```
 
-## Database operation
+## Database operations:
 
 ### Show Databases list
 
