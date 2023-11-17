@@ -1,27 +1,54 @@
 # Webrium Console
 
+> The Console feature still needs more features to be added.
 
-### Model making:
+<br>
+
+webrium console provides a series of features to the developer and tries to make some tasks easier. For example, it can be used to create controller files or models, or view the list of databases or tables, etc.
+
+<br>
+
+## Model operation
+
+### Create a model
+
+The following example creates a blank model
+```
+php webrium make:model User
+```
+
+By using `--table` according to the name of the model (for example, `User`), the name of the `users` table is automatically created and set in the model.
+
 ```
 php webrium make:model User --table
-// or
-php webrium make:model User --table=my-custom-table-name
 ```
 
-Making the controller:
+You can also specify the desired table name
+
+```
+php webrium make:model User --table=my_custom_table_name
+```
+
+## Controller operation
+
+
+### Create a model:
+In the example below, the `AuthController.php` file is created
 
 ```
 php webrium make:controller Auth
 ```
 
-### DB Action:
-Show Database list
+## DB operation
+
+### Show Database list
 ```
 php webrium db tables
 ```
 
-### Table Action
-Show columns and column information
+## Table operation
+
+### Show columns and column information
 ```
 php webrium table users info
 ```
