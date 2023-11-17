@@ -39,12 +39,28 @@ In the example below, the `AuthController.php` file is created
 php webrium make:controller Auth
 ```
 
-## DB operation
+## Database operation
 
-### Show Database list
+### Show Databases list
+
+The following command shows the list of all databases
+
+```
+php webrium db list
+```
+
+### Show Tables list
+
+It shows the list of current database tables. 
+
 ```
 php webrium db tables
 ```
+By using --use, you can view the list of other databases. But you must have already defined the databases in DB.php
+```
+php webrium db tables --use=second_db
+```
+
 
 ## Table operation
 
