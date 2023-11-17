@@ -56,7 +56,7 @@ It shows the list of current database tables.
 ```
 php webrium db tables
 ```
-By using --use, you can view the list of other databases. But you must have already defined the databases in DB.php
+By using `--use`, you can view the list of other databases. But you must have already defined the databases in DB.php
 ```
 php webrium db tables --use=second_db
 ```
