@@ -93,7 +93,7 @@ class DbAction extends Command
         $name = $input->getArgument('name');
 
         $helper = $this->getHelper('question');
-        $question = new ConfirmationQuestion('<question>Are you sure you want to delete the users database?(Type yes to continue):</question>', false);
+        $question = new ConfirmationQuestion('<question>Are you sure you want to delete the "<error>'.$name.'</error>" database?(Type yes to continue):</question>', false);
         if (!$helper->ask($input, $output, $question)) {
             return Command::SUCCESS;
         }
