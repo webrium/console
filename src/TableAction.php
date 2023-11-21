@@ -23,14 +23,14 @@ class TableAction extends Command
     protected function configure()
     {
         Directory::initDefaultStructure();
-        $this->addArgument('table', InputArgument::REQUIRED);
         $this->addArgument('action', InputArgument::REQUIRED);
+        $this->addArgument('table_name', InputArgument::REQUIRED);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $action = $input->getArgument('action');
-        $table = $input->getArgument('table');
+        $table = $input->getArgument('table_name');
 
         if ($action == 'info' || $action == 'columns') {
             return $this->showAllTableColumns($output, $table);
