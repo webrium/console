@@ -7,9 +7,11 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 
 use Foxdb\DB;
+use Foxdb\Schema;
 use Webrium\Directory;
 
 class TableAction extends Command
@@ -31,10 +33,13 @@ class TableAction extends Command
         $table = $input->getArgument('table');
 
         if ($action == 'info' || $action == 'columns') {
-            $this->showAllTableColumns($output, $table);
+            return $this->showAllTableColumns($output, $table);
+        }
+        else if($action == 'drop'){
+            return $this->dropTable($input, $output);
         }
 
-        return Command::SUCCESS;
+        return Command::INVALID;
     }
 
     private function showAllTableColumns($output, $name)
@@ -46,6 +51,25 @@ class TableAction extends Command
         $table->setHeaders(['Name', 'Type', 'Null', 'Attributes','Default','Extra']);
         $table->setRows($res);
         $table->render();
+        return Command::SUCCESS;
+    }
+
+    public function dropTable($input, $output){
+        $name = $input->getArgument('table');
+
+        $helper = $this->getHelper('question');
+        $question = new ConfirmationQuestion('<question>Are you sure you want to delete the "<error>'.$name.'</error>" tables?(Type yes to continue):</question>', false);
+        if (!$helper->ask($input, $output, $question)) {
+            return Command::SUCCESS;
+        }
+        else{
+            (new Schema($name))->drop();
+            $output->writeLn("<info>$name was deleted<info>");
+            return Command::SUCCESS;
+        }
+
+
+        Command::INVALID;
     }
 
 }
