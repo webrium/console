@@ -39,6 +39,8 @@ In the example below, the `AuthController.php` file is created
 php webrium make:controller Auth
 ```
 
+<br>
+
 ## Database operations:
 
 ### Show Databases list
@@ -61,14 +63,46 @@ By using `--use`, you can view the list of other databases. But you must have al
 php webrium db tables --use=second_db
 ```
 
+<br>
+
 
 ## Table operation
 
 ### Show columns and column information
 ```
-php webrium table users info
+php webrium table info users
+// or
+php webrium table columns users
 ```
 In the example above, `users` is the name of the table we want to view its information.
+
+### Drop a table
+
+```
+php webrium table drop categorys
+```
+
+<br>
+
+## Logs
+
+### Display the list of log files
+
+```
+php webrium log list
+```
+
+### Show the latest bugs
+
+```
+php webrium log latest
+```
+
+### Display logs based on log file name
+
+```
+php webrium log file {log_file_name}
+```
 
 
 ## Init Telegram bot
