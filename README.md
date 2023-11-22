@@ -104,6 +104,7 @@ php webrium log latest
 php webrium log file {log_file_name}
 ```
 
+<br>
 
 ## Init Telegram bot
 There is also a feature for developers who want to develop Telegram bots
