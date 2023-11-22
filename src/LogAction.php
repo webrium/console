@@ -22,6 +22,7 @@ class LogAction extends Command
     {
         Directory::initDefaultStructure();
         $this->addArgument('action', InputArgument::REQUIRED);
+        $this->addArgument('name', InputArgument::OPTIONAL);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -29,27 +30,37 @@ class LogAction extends Command
         $action = $input->getArgument('action');
 
         if($action == 'list'){
-            $this->showLogList($output);
+            return $this->showLogList($output);
         }
         else if($action == 'clear'){
-            $this->clearLogs();
+            return $this->clearLogs();
         }
         else if($action == 'latest'){
-            $this->showLatestLog($output);
-
+            return $this->showLatestLog($input, $output);
+        }
+        else if($action == 'file'){
+            return $this->showLogFile($input, $output);
         }
 
 
-        return Command::SUCCESS;
+        return Command::INVALID;
     }
 
     private function showLogList($output){
 
         $list = json_decode(json_encode(File::getFiles(Directory::path('logs'))), true) ;
+        
+        $logs = [];
+
+        foreach($list as $log){
+            $logs[] = [$log];
+        }
         $table = new Table($output);
         $table->setHeaders(['Log name']);
-        $table->setRows([$list]);
+        $table->setRows($logs);
         $table->render();
+
+        return Command::SUCCESS;
     }
 
 
@@ -58,22 +69,45 @@ class LogAction extends Command
         foreach($files as $log){
             File::delete(Directory::path('logs').'/'.$log);
         }
+
+        return Command::SUCCESS;
     }
 
-    public function showLatestLog($output){
+    public function showLatestLog($input, $output){
         $files = array_diff(scandir(Directory::path('logs'), SCANDIR_SORT_DESCENDING), ['.', '..', '.gitignore']);
 
         if(count($files)>=1){
-            $text = File::getContent(Directory::path('logs').'/'.$files[0]);
-            $array = explode('##', $text);
-
-            foreach($array as $log){
-                $output->writeln("<error> ## </error>$log");
-                $output->writeln('');
-            }
+            $this->showLog($files[0], $input, $output);
         }
         else{
             $output->writeln('<info>Log file not found</info>');
+        }
+        return Command::SUCCESS;
+    }
+
+    private function showLogFile($input, $output){
+        $name = $input->getArgument('name');
+        return $this->showLog($name, $input, $output);
+    }
+
+
+    private function showLog($file_path, $input, $output){
+        $path = Directory::path('logs').'/'.$file_path;
+        if(File::exists($path)){
+            $text = File::getContent($path);
+            $array = explode('##', $text);
+    
+            foreach($array as $log){
+                $log = str_replace("#", "\n  #", $log);
+                $output->writeln("<error> ## </error>$log");
+                $output->writeln('');
+            }
+    
+            return Command::SUCCESS;
+        }
+        else{
+            $output->writeLn("<error>File not found</error>");
+            return Command::INVALID;
         }
     }
 
