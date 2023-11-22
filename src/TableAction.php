@@ -24,7 +24,7 @@ class TableAction extends Command
     {
         Directory::initDefaultStructure();
         $this->addArgument('action', InputArgument::REQUIRED);
-        $this->addArgument('table_name', InputArgument::REQUIRED);
+        $this->addArgument('table_name', InputArgument::OPTIONAL);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -55,7 +55,7 @@ class TableAction extends Command
     }
 
     public function dropTable($input, $output){
-        $name = $input->getArgument('table');
+        $name = $input->getArgument('table_name');
 
         $helper = $this->getHelper('question');
         $question = new ConfirmationQuestion('<question>Are you sure you want to delete the "<error>'.$name.'</error>" tables?(Type yes to continue):</question>', false);
