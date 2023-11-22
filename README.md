@@ -63,6 +63,17 @@ By using `--use`, you can view the list of other databases. But you must have al
 php webrium db tables --use=second_db
 ```
 
+### Create a new database
+```
+php webrium db create prj_dbname
+```
+
+### Drop a database
+
+```
+php webrium db drop dbname
+```
+
 <br>
 
 
