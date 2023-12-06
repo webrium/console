@@ -22,12 +22,14 @@ class CallController extends Command
         Directory::initDefaultStructure();
         $this->addArgument('name', InputArgument::REQUIRED, 'Controller->method Name');
         $this->addOption('params', 'p', InputArgument::OPTIONAL);
+        $this->addOption('model', 'm', InputOption::VALUE_NEGATABLE);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $name = $input->getArgument('name');
         $params = $input->getOption('params')??"'[]'";
+        $model = $input->getOption('model');
 
 
         $params = str_replace("'", '', $params);
@@ -38,18 +40,18 @@ class CallController extends Command
         $controller = $array[0];
         $method = $array[1];
 
-        $dir = Directory::get('controllers');
+        if($model){
+            $dir = Directory::get('models');
+        }
+        else{
+            $dir = Directory::get('controllers');
+        }
 
         $class = "$dir\\$controller";
 
         $class = str_replace('/', '\\', $class);
 
         $controller = new $class;
-
-
-        if (method_exists($controller, '__init')) {
-            $controller->__init();
-        }
 
 
         if (method_exists($controller, $method)) {
@@ -65,11 +67,6 @@ class CallController extends Command
         } else {
             Command::FAILURE;
             $output->writeln("<error>Method $method not found in $class.php</error>");
-        }
-
-
-        if (method_exists($controller, '__end')) {
-            $controller->__end();
         }
 
         return Command::SUCCESS;
