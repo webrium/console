@@ -21,7 +21,7 @@ class CallController extends Command
     {
         Directory::initDefaultStructure();
         $this->addArgument('name', InputArgument::REQUIRED, 'Controller->method Name');
-        $this->addOption('params', 'p', InputArgument::OPTIONAL);
+        $this->addOption('params', 'p', InputOption::VALUE_OPTIONAL);
         $this->addOption('model', 'm', InputOption::VALUE_NEGATABLE);
     }
 
