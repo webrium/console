@@ -12,8 +12,9 @@ use Webrium\Directory;
 
 class GenerateController extends Command
 {
-    // the name of the command (the part after "bin/console")
+
     protected static $defaultName = 'make:controller';
+
 
     protected function configure()
     {
@@ -21,6 +22,7 @@ class GenerateController extends Command
         $this
             ->addArgument('name', InputArgument::REQUIRED, 'Who do you want to greet?');
     }
+    
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
@@ -37,19 +39,15 @@ class GenerateController extends Command
             return Command::FAILURE;
         }
         
-        $s = $output->section();
-
-        $s->writeln('Creating a Controller file ..');
 
         File::putContent("$model_dir/$name.php", $this->getBasicStr($name));
 
-        sleep(2);
-
-        $s->overwrite("Controller created");
-        $s->writeln("path : <info>$model_dir/$name.php</info>");
+        $output->writeln("Controller created");
+        $output->writeln("path : <info>$model_dir/$name.php</info>");
 
         return Command::SUCCESS;
     }
+
 
     private function getBasicStr($name){
         return "<?php\nnamespace App\Controllers;\n\nclass $name{\n//..\n\n}";
