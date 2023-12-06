@@ -13,18 +13,15 @@ use Webrium\Directory;
 
 class GenerateModel extends Command
 {
-    // the name of the command (the part after "bin/console")
+
     protected static $defaultName = 'make:model';
 
-    public static function test(){
-        echo 'hi';
-    }
-
+    
     protected function configure()
     {
         Directory::initDefaultStructure();
         $this->addArgument('name', InputArgument::REQUIRED, 'Model Name');
-        $this->addOption('table', null, InputOption::VALUE_OPTIONAL, 'Model table name', false);
+        $this->addOption('table', 't', InputOption::VALUE_OPTIONAL, 'Model table name', false);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
