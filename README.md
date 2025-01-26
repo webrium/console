@@ -32,7 +32,7 @@ php webrium make:model User --table=my_custom_table_name
 ## Controller operation
 
 
-### Create a model:
+### Create a controller:
 In the example below, the `AuthController.php` file is created
 
 ```
@@ -54,6 +54,12 @@ Call Model method
 ```
 php webrium call -m User@getCount
 
+```
+
+Parameters can be passed to the function in JSON format.
+
+```
+php webrium call -m SMS@RayeganSmsPatern -p '["parameter 1", "parametr 2"]'
 ```
 
 <br>
