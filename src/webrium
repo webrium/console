@@ -4,6 +4,7 @@ require __DIR__.'/../../../../vendor/autoload.php';
 
 
 use Webrium\App;
+use Webrium\Console\InitWebrium;
 use Webrium\File;
 use Webrium\Debug;
 use Webrium\Directory;
@@ -26,6 +27,7 @@ File::source('config',['Config.php','DB.php', 'Console.php']);
 
 $application = new Application();
 
+$application->add(new InitWebrium());
 $application->add(new GenerateModel());
 $application->add(new GenerateController());
 $application->add(new InitBot());
