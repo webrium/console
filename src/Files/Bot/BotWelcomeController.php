@@ -1,15 +1,15 @@
 <?php
 namespace App\Controllers;
-use botfire\botfire\bot;
+use Botfire\Bot;
 
 class BotWelcomeController
 {
 
   public function sendHello(){
-    bot::this()->message('Hello '.(bot::chat()->first_name??'World'))->send();
+    Bot::new()->text('Hello World'))->send();
   }
 
   public function notFound(){
-    bot::this()->message('The command was not recognized')->send();
+    Bot::new()->text('The command was not recognized')->send();
   }
 }
