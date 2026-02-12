@@ -10,7 +10,7 @@
     ],
     "require":{
       "symfony/console": "^5.2@dev",
-      "webrium/core": "^2.0.0"
+      "webrium/core": "^3.0.0"
     },
     "minimum-stability": "dev",
     "autoload": {
