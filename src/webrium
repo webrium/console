@@ -1,7 +1,25 @@
 <?php
 
-require __DIR__.'/../../../../vendor/autoload.php';
+$paths = [
+    __DIR__ . '/vendor/autoload.php',
+    __DIR__ . '/../vendor/autoload.php',
+];
 
+$autoload = null;
+
+foreach ($paths as $path) {
+    if (file_exists($path)) {
+        $autoload = $path;
+        break;
+    }
+}
+
+if ($autoload) {
+    require $autoload;
+} else {
+    fwrite(STDERR, "\033[31mError:\033[0m Composer autoloader not found. Please run 'composer install' in your project root.\n");
+    exit(1);
+}
 
 use Webrium\App;
 use Webrium\Console\InitWebrium;
@@ -11,6 +29,7 @@ use Webrium\Directory;
 
 use Webrium\Console\GenerateModel;
 use Webrium\Console\GenerateController;
+use Webrium\Console\GenerateRoute;
 use Webrium\Console\CallController;
 use Webrium\Console\InitBot;
 
@@ -23,12 +42,9 @@ use Webrium\Console\Plugin\PluginInfo;
 use Symfony\Component\Console\Application;
 
 
-App::root(__DIR__);
 Debug::displayErrors(true);
 Directory::initDefaultStructure();
-
-// Load config
-File::source('config',['Config.php','DB.php', 'Console.php']);
+App::initialize(__DIR__);
 
 
 $application = new Application();
@@ -36,6 +52,7 @@ $application = new Application();
 $application->add(new InitWebrium());
 $application->add(new GenerateModel());
 $application->add(new GenerateController());
+$application->add(new GenerateRoute());
 $application->add(new InitBot());
 $application->add(new CallController());
 
