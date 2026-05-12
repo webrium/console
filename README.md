@@ -1,192 +1,275 @@
 # Webrium Console
 
+A command-line toolkit for the [Webrium](https://github.com/webrium) PHP framework. Provides commands for scaffolding files, managing databases, inspecting logs, and installing plugins.
 
+## Requirements
 
-The Webrium Console Commands include tools for generating files, calling methods, and managing databases. Below is a list of available commands and how to use them.
+- PHP 8.1+
+- Symfony Console 6.4+
 
+## Installation
 
-## Generate a Model
-
-The make:model command creates a new model file in the models directory. You can create either a simple model or a database-connected model.
-
-#### Usage
+```bash
+composer require webrium/console
 ```
-php webrium make:model <ModelName> [--table=<TableName>] [--force] [--no-plural]
+
+---
+
+## Available Commands
+
+| Command | Description |
+|---|---|
+| `init` | Create the project directory structure |
+| `make:model` | Generate a model file |
+| `make:controller` | Generate a controller file |
+| `make:route` | Generate a route file |
+| `call` | Call a method on a controller or model |
+| `db` | Manage databases |
+| `table` | Manage database tables |
+| `log` | Manage log files |
+| `botfire:init` | Initialize a Telegram bot |
+| `plugin:install` | Install a plugin |
+| `plugin:update` | Update an installed plugin |
+| `plugin:remove` | Remove an installed plugin |
+| `plugin:list` | List installed plugins |
+| `plugin:info` | Preview a plugin without installing |
+
+---
+
+## `init`
+
+Creates all standard Webrium project directories.
+
+```bash
+php webrium init
 ```
 
- - **ModelName** : The name of the model (e.g., User).
- - **--table|-t**: Specify the database table name (e.g., users). If omitted, the model name is converted to snake_case and pluralized (e.g., User becomes users).
-- **--force|-f**: Overwrite the model file if it already exists.
-- **--no-plural**: Prevent adding an "s" to the table name (e.g., User stays user instead of users).
+---
 
-#### Example
+## `make:model`
+
+Generates a model file in the models directory. Without `--table`, creates a simple model. With `--table`, creates a database-connected model.
+
+```bash
+php webrium make:model <Name> [--table=<table>] [--no-plural] [--force]
 ```
+
+| Argument / Option | Description |
+|---|---|
+| `Name` | Model class name (e.g. `User`) |
+| `--table, -t` | Database table name. If omitted, the name is auto-converted to snake_case and pluralized |
+| `--no-plural` | Prevent automatic pluralization of the table name |
+| `--force, -f` | Overwrite if the file already exists |
+
+```bash
+# DB model with explicit table name
 php webrium make:model User --table=users
-```
-Or instead of that
-```
+
+# DB model — table name auto-generated as "users"
 php webrium make:model User -t
+
+# Simple model (no DB)
+php webrium make:model UserHelper
+
+# DB model — table stays "status" instead of "statuses"
+php webrium make:model Status -t --no-plural
 ```
 
-This creates a User.php model file in the models directory, linked to the users table.
+---
 
+## `make:controller`
 
-## Controller operation
+Generates a controller file in the controllers directory. Automatically appends `Controller` to the name if not already present.
 
-
-### Generate a Controller
-
-The make:controller command creates a new controller file in the controllers directory.
-
-#### Usage
-```
-php webrium make:controller <ControllerName> [--force] [--namespace=<Namespace>]
+```bash
+php webrium make:controller <Name> [--namespace=<Namespace>] [--force]
 ```
 
+| Argument / Option | Description |
+|---|---|
+| `Name` | Controller name (e.g. `User` → `UserController`) |
+| `--namespace` | Custom namespace (default: `App\Controllers`) |
+| `--force, -f` | Overwrite if the file already exists |
 
-ControllerName: The name of the controller (e.g., User). The suffix Controller is automatically added if not included.
-
-- **--force|-f**: Overwrite the controller file if it already exists.
-- **--namespace**: Specify a custom namespace (default: App\Controllers).
-
-#### Example
-
-```
+```bash
 php webrium make:controller User
+php webrium make:controller Admin --namespace="App\Controllers\Admin"
 ```
 
-This creates a UserController.php file in the controllers directory with the namespace App\Controllers.
+---
 
+## `make:route`
 
+Generates a route file in the routes directory.
 
-## Call a Controller or Model Method
-
-The call command allows you to execute a method on a controller or model, passing optional parameters.
-
-#### Usage
-
+```bash
+php webrium make:route <Name> [--force]
 ```
+
+| Argument / Option | Description |
+|---|---|
+| `Name` | Route file name (e.g. `Api` → `Api.php`) |
+| `--force, -f` | Overwrite if the file already exists |
+
+```bash
+php webrium make:route Api
+php webrium make:route Web --force
+```
+
+---
+
+## `call`
+
+Calls a method on a controller or model class directly from the terminal.
+
+```bash
 php webrium call <Class@Method> [--params=<JSON>] [--model] [--namespace=<Namespace>]
 ```
 
-- **Class@Method**: The class and method to call (e.g., UserController@getUsers or User@getDetails).
-- **--params|-p**: A JSON array of parameters (e.g., [1, "active"]). Defaults to an empty array.
-- **--model|-m**: Target a model instead of a controller.
-- **--namespace**: Specify a custom namespace (default: App\Controllers for controllers, App\Models for models).
+| Argument / Option | Description |
+|---|---|
+| `Class@Method` | Class and method name (e.g. `UserController@index`) |
+| `--params, -p` | JSON array of arguments passed to the method (default: `[]`) |
+| `--model, -m` | Target a model instead of a controller |
+| `--namespace` | Custom namespace (default: `App\Controllers` or `App\Models`) |
 
-
-#### Example
-
-```
-php webrium call UserController@getUsers --params='[1, "active"]'
-```
-
-This calls the getUsers method on App\Controllers\UserController with the parameters [1, "active"].
-
-<br>
-
-
-## Manage Databases
-
-The `db` command provides tools to manage databases, including listing databases, viewing tables, creating databases, and deleting databases.
-
-#### Usage
-
-```
-php webrium db <action> [<DatabaseName>] [--use=<Database>] [--force]
+```bash
+php webrium call UserController@index
+php webrium call UserController@find --params='[42]'
+php webrium call User@active --model
+php webrium call Report@generate --params='["2024-01", true]' --namespace="App\Services"
 ```
 
-- action: The action to perform:
-  - list: List all databases.
-  - tables: List tables in a database.
-  - create: Create a new database.
-  - drop: Delete a database.
+---
 
-- **DatabaseName**: The name of the database (required for create and drop).
-- **--use|-u**: Specify a database for the tables action.
-- **--force|-f**: Skip confirmation when dropping a database.
+## `db`
 
+Manages databases.
 
-#### Examples
-
-List all databases:
+```bash
+php webrium db <action> [<name>] [--use=<database>] [--force]
 ```
+
+| Action | Description |
+|---|---|
+| `list` | List all databases |
+| `tables` | List tables in a database |
+| `create` | Create a new database |
+| `drop` | Delete a database (prompts for confirmation) |
+
+| Option | Description |
+|---|---|
+| `--use, -u` | Specify a database for the `tables` action |
+| `--force, -f` | Skip confirmation prompt when dropping |
+
+```bash
 php webrium db list
-```
-
-List tables in a specific database:
-```
 php webrium db tables --use=my_database
-```
-
-Create a new database:
-
-```
 php webrium db create my_database
-```
-
-Delete a database (with confirmation):
-```
 php webrium db drop my_database
+php webrium db drop my_database --force
 ```
 
+---
 
+## `table`
 
-<br>
+Inspects and manages individual tables.
 
-
-## Manage Tables
-
-The table command allows you to manage database tables, including viewing column details and deleting tables.
-
-#### Usage
-```
-php webrium table <action> <TableName> [--use=<Database>] [--force]
+```bash
+php webrium table <action> <table_name> [--use=<database>] [--force]
 ```
 
-- **action**: The action to perform:
-  - **info** or `columns`: Display column details (name, type, null, key, default, extra).
-  - **drop**: Delete the table.
+| Action | Description |
+|---|---|
+| `info` / `columns` | Show column details (name, type, nullable, key, default, extra) |
+| `drop` | Delete the table (prompts for confirmation) |
 
-- **TableName**: The name of the table.
-- **--use|-u**: Specify a database.
-- **--force|-f**: Skip confirmation when dropping a table.
+| Option | Description |
+|---|---|
+| `--use, -u` | Specify a database |
+| `--force, -f` | Skip confirmation prompt when dropping |
 
-#### Examples
-
-View columns of a table:
-```
-php webrium table columns users 
-```
-
-Delete a table (with confirmation):
-```
-php webrium table drop users
+```bash
+php webrium table info users
+php webrium table columns orders --use=shop_db
+php webrium table drop sessions
+php webrium table drop sessions --force
 ```
 
-<br>
+---
 
-## Logs
+## `log`
 
-### Display the list of log files
+Manages Webrium log files stored in the logs directory.
 
+```bash
+php webrium log <action> [<name>]
 ```
+
+| Action | Description |
+|---|---|
+| `list` | List all log files |
+| `latest` | Display the most recent log file |
+| `file <name>` | Display a specific log file by name |
+| `clear` | Delete all log files |
+
+```bash
 php webrium log list
-```
-
-### Show the latest logs
-
-```
 php webrium log latest
+php webrium log file 2024-01-15.log
+php webrium log clear
 ```
 
-### Display logs based on log file name
+---
 
+## `botfire:init`
+
+Scaffolds the files needed to connect a Telegram bot to your Webrium project.
+
+```bash
+php webrium botfire:init [<token>] [--debug=<chat_id>] [--force]
 ```
-php webrium log file {log_file_name}
+
+| Argument / Option | Description |
+|---|---|
+| `token` | Your Telegram bot token (optional at this stage) |
+| `--debug` | Chat ID to receive error messages in debug mode |
+| `--force, -f` | Overwrite existing bot files |
+
+```bash
+php webrium botfire:init 123456:ABC-DEF
+php webrium botfire:init 123456:ABC-DEF --debug=987654321
 ```
 
-<br>
+The command copies route and controller files for the bot and adds the token and debug settings to your `.env` file.
 
+---
 
+## Plugin System
 
+Webrium Console includes a full plugin system for installing and managing distributable components.
+
+```bash
+php webrium plugin:install <source> [--force] [--dry-run] [--no-backup]
+php webrium plugin:update  <source> [--force] [--no-backup]
+php webrium plugin:remove  <name>   [--no-backup] [--keep-files]
+php webrium plugin:list
+php webrium plugin:info    <source>
+```
+
+The `source` argument accepts a local `.zip` file path or an `https://` URL:
+
+```bash
+php webrium plugin:install ./my-plugin.zip
+php webrium plugin:install https://example.com/releases/my-plugin.zip
+php webrium plugin:install https://github.com/user/repo/releases/download/v1.0.0/plugin.zip
+```
+
+For full documentation on creating and distributing plugins, see the **[Plugin System Wiki](https://github.com/webrium/console/wiki/webrium-plugin-system)**.
+
+---
+
+## License
+
+MIT
