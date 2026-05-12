@@ -1,5 +1,5 @@
 <?php
-namespace webrium\console;
+namespace Webrium\Console;
 
 class Zip{
 
