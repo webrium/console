@@ -1,0 +1,43 @@
+{
+  "name": "file-manager",
+  "version": "1.0.0",
+  "description": "A file manager plugin for Webrium",
+  "author": "Your Name",
+  "require": {
+    "webrium": ">=1.0.0"
+  },
+  "files": [
+    {
+      "src": "Controllers/FileManagerController.php",
+      "dest": "controllers",
+      "subpath": "Plugins",
+      "overwrite": false
+    },
+    {
+      "src": "Models/FileModel.php",
+      "dest": "models",
+      "subpath": null,
+      "overwrite": false
+    },
+    {
+      "src": "Views/file-manager.html",
+      "dest": "views",
+      "subpath": "plugins/file-manager",
+      "overwrite": true
+    },
+    {
+      "src": "Assets/file-manager.css",
+      "dest": "assets",
+      "subpath": "css",
+      "overwrite": true
+    }
+  ],
+  "hooks": {
+    "before_install": [
+      "make:model File --table=files"
+    ],
+    "after_install": [
+      "make:route FileManager"
+    ]
+  }
+}
