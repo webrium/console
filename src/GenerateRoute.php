@@ -1,61 +1,63 @@
 <?php
 namespace Webrium\Console;
 
-
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
-
+use Symfony\Component\Console\Style\SymfonyStyle;
 use Webrium\File;
 use Webrium\Directory;
 
 class GenerateRoute extends Command
 {
-    // the name of the command (the part after "bin/console")
-    protected static $defaultName = 'make:route';
-
+    protected static $defaultName        = 'make:route';
+    protected static $defaultDescription = 'Generate a new route file';
 
     protected function configure()
     {
         Directory::initDefaultStructure();
-        $this->addArgument('name', InputArgument::REQUIRED, 'Route Name');
+        $this
+            ->addArgument('name', InputArgument::REQUIRED, 'Route file name')
+            ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force overwrite if the route already exists');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-        $name = $input->getArgument('name');
+        $io    = new SymfonyStyle($input, $output);
+        $name  = $input->getArgument('name');
+        $force = $input->getOption('force');
 
-        $model_dir = Directory::path('routes');
-        $root = __DIR__.'/Files/Framework';
-
-        $route_string = '';
-
-
-        $class_name = $name;
-        $file_name = "$name.php";
-
-
-        $route_string = File::getContent("$root/Route.php");
-
-        $file_path = "$model_dir/$file_name";
-        if(File::exists($file_path)){
-            $output->writeln("<error>ERROR: The '$file_name' route already exists</error>");
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $name)) {
+            $io->error("Invalid route name '$name'. Use only letters, numbers, and underscores.");
             return Command::FAILURE;
         }
 
-        $output->writeln("Route Name: <comment>$class_name</comment>");
-        
+        $routes_dir = Directory::path('routes');
+        if (!is_dir($routes_dir)) {
+            $io->error("Routes directory '$routes_dir' does not exist.");
+            return Command::FAILURE;
+        }
+        if (!is_writable($routes_dir)) {
+            $io->error("Routes directory '$routes_dir' is not writable.");
+            return Command::FAILURE;
+        }
 
+        $file_name = "$name.php";
+        $file_path = "$routes_dir/$file_name";
 
-        $output->writeln("<info>The '$file_name' route was created.</info>");
+        if (File::exists($file_path) && !$force) {
+            $io->error("Route '$file_name' already exists at '$file_path'. Use --force to overwrite.");
+            return Command::FAILURE;
+        }
 
+        $template = File::getContent(__DIR__ . '/Files/Framework/Route.php');
+        File::putContent($file_path, $template);
 
-
-        File::putContent($file_path, $route_string);
+        $io->title('Route Generation');
+        $io->writeln("<fg=green>✔ Route '$name' created successfully at '$file_path'.</>");
 
         return Command::SUCCESS;
     }
-   
 }
