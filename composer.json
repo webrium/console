@@ -9,13 +9,15 @@
         }
     ],
     "require":{
-      "symfony/console": "^5.2@dev",
-      "webrium/core": "dev-master"
+      "symfony/console": "^6.4"
     },
     "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
             "Webrium\\Console\\": "src/"
         }
+    },
+    "require-dev": {
+        "webrium/core": "dev-master"
     }
 }
