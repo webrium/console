@@ -14,6 +14,12 @@ use Webrium\Console\GenerateController;
 use Webrium\Console\CallController;
 use Webrium\Console\InitBot;
 
+use Webrium\Console\Plugin\PluginInstall;
+use Webrium\Console\Plugin\PluginUpdate;
+use Webrium\Console\Plugin\PluginRemove;
+use Webrium\Console\Plugin\PluginList;
+use Webrium\Console\Plugin\PluginInfo;
+
 use Symfony\Component\Console\Application;
 
 
@@ -32,5 +38,12 @@ $application->add(new GenerateModel());
 $application->add(new GenerateController());
 $application->add(new InitBot());
 $application->add(new CallController());
+
+// Plugin management commands
+$application->add(new PluginInstall());
+$application->add(new PluginUpdate());
+$application->add(new PluginRemove());
+$application->add(new PluginList());
+$application->add(new PluginInfo());
 
 $application->run();
