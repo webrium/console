@@ -25,7 +25,7 @@ composer require webrium/console
 | `make:route` | Generate a route file |
 | `call` | Call a method on a controller or model |
 | `db` | Manage databases |
-| `table` | Manage database tables |
+| `table` | Manage database tables and execute SQL files |
 | `log` | Manage log files |
 | `botfire:init` | Initialize a Telegram bot |
 | `plugin:install` | Install a plugin |
@@ -174,7 +174,7 @@ php webrium db drop my_database --force
 
 ## `table`
 
-Inspects and manages individual tables.
+Inspects and manages individual tables, and can also execute SQL files against a database.
 
 ```bash
 php webrium table <action> <table_name> [--use=<database>] [--force]
@@ -182,19 +182,31 @@ php webrium table <action> <table_name> [--use=<database>] [--force]
 
 | Action | Description |
 |---|---|
-| `info` / `columns` | Show column details (name, type, nullable, key, default, extra) |
+| `info` | Show table information |
+| `columns` | Show column details (name, type, nullable, key, default, extra) |
 | `drop` | Delete the table (prompts for confirmation) |
+| `truncate` | Remove all rows from the table (prompts for confirmation) |
+| `rename` | Rename an existing table |
+| `copy` | Copy table structure to a new table |
+| `exists` | Check whether a table exists |
+| `count` | Count rows in a table |
+| `run` | Execute a SQL file (`<table_name>` is treated as a file path) |
 
 | Option | Description |
 |---|---|
 | `--use, -u` | Specify a database |
-| `--force, -f` | Skip confirmation prompt when dropping |
+| `--force, -f` | Skip confirmation prompts for destructive actions |
 
 ```bash
 php webrium table info users
 php webrium table columns orders --use=shop_db
 php webrium table drop sessions
 php webrium table drop sessions --force
+php webrium table rename old_table new_table
+php webrium table copy products products_backup
+php webrium table exists users
+php webrium table count orders
+php webrium table run sql/setup_tables.sql --use=shop_db
 ```
 
 ---
