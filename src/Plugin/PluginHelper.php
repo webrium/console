@@ -280,4 +280,41 @@ trait PluginHelper
         $hash = hash_file('sha256', $zipPath);
         $io->writeln("<fg=cyan>SHA-256:</> $hash");
     }
+
+    private function runSqlFiles(array $manifest, string $tempDir, SymfonyStyle $io): bool
+    {
+        if (empty($manifest['sql'])) return true;
+
+        foreach ($manifest['sql'] as $relativePath) {
+            $sqlPath = realpath($tempDir . '/src/' . ltrim($relativePath, '/'));
+
+            if (!$sqlPath || !file_exists($sqlPath)) {
+                $io->error("SQL file not found in archive: src/$relativePath");
+                return false;
+            }
+
+            if (!str_starts_with($sqlPath, realpath($tempDir . '/src'))) {
+                $io->error("Path traversal detected in sql entry: '$relativePath'.");
+                return false;
+            }
+
+            $sql = file_get_contents($sqlPath);
+            if (empty(trim($sql))) {
+                $io->warning("SQL file is empty, skipping: $relativePath");
+                continue;
+            }
+
+            $io->writeln("<fg=cyan>⚙ Running SQL:</> $relativePath");
+
+            try {
+                \Foxdb\DB::statement($sql);
+                $io->writeln("<fg=green>✔ SQL executed:</> $relativePath");
+            } catch (\Exception $e) {
+                $io->error("SQL execution failed for '$relativePath': " . $e->getMessage());
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
