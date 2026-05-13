@@ -1,25 +1,7 @@
 <?php
 
-$paths = [
-    __DIR__ . '/vendor/autoload.php',
-    __DIR__ . '/../vendor/autoload.php',
-];
+require __DIR__.'/../../../../vendor/autoload.php';
 
-$autoload = null;
-
-foreach ($paths as $path) {
-    if (file_exists($path)) {
-        $autoload = $path;
-        break;
-    }
-}
-
-if ($autoload) {
-    require $autoload;
-} else {
-    fwrite(STDERR, "\033[31mError:\033[0m Composer autoloader not found. Please run 'composer install' in your project root.\n");
-    exit(1);
-}
 
 use Webrium\App;
 use Webrium\Console\InitWebrium;
@@ -38,13 +20,18 @@ use Webrium\Console\Plugin\PluginUpdate;
 use Webrium\Console\Plugin\PluginRemove;
 use Webrium\Console\Plugin\PluginList;
 use Webrium\Console\Plugin\PluginInfo;
+use Webrium\Console\Plugin\PluginNew;
+use Webrium\Console\Plugin\PluginExport;
 
 use Symfony\Component\Console\Application;
 
 
+App::root(__DIR__);
 Debug::displayErrors(true);
 Directory::initDefaultStructure();
-App::initialize(__DIR__);
+
+// Load config
+File::source('config',['Config.php','DB.php', 'Console.php']);
 
 
 $application = new Application();
@@ -62,5 +49,7 @@ $application->add(new PluginUpdate());
 $application->add(new PluginRemove());
 $application->add(new PluginList());
 $application->add(new PluginInfo());
+$application->add(new PluginNew());
+$application->add(new PluginExport());
 
 $application->run();
