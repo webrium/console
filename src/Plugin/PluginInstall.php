@@ -1,4 +1,5 @@
 <?php
+
 namespace Webrium\Console\Plugin;
 
 use Symfony\Component\Console\Command\Command;
@@ -23,7 +24,7 @@ class PluginInstall extends Command
             ->addArgument('source', InputArgument::REQUIRED, 'Path to plugin zip or https:// URL')
             ->addOption('force',    'f',  InputOption::VALUE_NONE, 'Overwrite existing files')
             ->addOption('dry-run',  null, InputOption::VALUE_NONE, 'Preview without making changes')
-            ->addOption('no-backup',null, InputOption::VALUE_NONE, 'Skip backup of overwritten files');
+            ->addOption('no-backup', null, InputOption::VALUE_NONE, 'Skip backup of overwritten files');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
@@ -141,6 +142,11 @@ class PluginInstall extends Command
             $io->writeln("<fg=green>✔ Installed:</> {$entry['dest']}");
         }
 
+        if (!$this->runSqlFiles($manifest, $tempDir, $io)) {
+            $this->cleanupTemp($tempDir, $zipPath, $source);
+            return Command::FAILURE;
+        }
+
         // 13. After-install hooks
         if (!$this->runHooks($manifest['hooks'] ?? [], 'after_install', $io)) {
             $this->cleanupTemp($tempDir, $zipPath, $source);
@@ -149,6 +155,7 @@ class PluginInstall extends Command
 
         // 14. Register
         $registry['installed'][] = [
+            'status' => 'active',  // disabled or active
             'name'         => $manifest['name'],
             'version'      => $manifest['version'],
             'description'  => $manifest['description'] ?? '',
@@ -156,7 +163,9 @@ class PluginInstall extends Command
             'installed_at' => date('Y-m-d H:i:s'),
             'hash'         => $zipHash,
             'files'        => $installed,
+            'meta'         => $manifest['meta'] ?? [],
         ];
+
         $this->saveRegistry($registry);
 
         $this->cleanupTemp($tempDir, $zipPath, $source);
