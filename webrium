@@ -1,6 +1,17 @@
 <?php
 
-// test
+/**
+ * Webrium Console Entry Point
+ *
+ * This script bootstraps the Webrium console application,
+ * loads the Composer autoloader, initializes the framework,
+ * and registers all available CLI commands.
+ */
+
+// ---------------------------------------------------------------------------
+// Autoloader Discovery
+// Supports both standalone and embedded (as a dependency) project structures
+// ---------------------------------------------------------------------------
 
 $paths = [
     __DIR__ . '/vendor/autoload.php',
@@ -23,17 +34,29 @@ if ($autoload) {
     exit(1);
 }
 
+// ---------------------------------------------------------------------------
+// Core Imports
+// ---------------------------------------------------------------------------
+
 use Webrium\App;
 use Webrium\Console\InitWebrium;
 use Webrium\File;
 use Webrium\Debug;
 use Webrium\Directory;
 
+// ---------------------------------------------------------------------------
+// Code Generator Commands
+// ---------------------------------------------------------------------------
+
 use Webrium\Console\GenerateModel;
 use Webrium\Console\GenerateController;
 use Webrium\Console\GenerateRoute;
 use Webrium\Console\CallController;
 use Webrium\Console\InitBot;
+
+// ---------------------------------------------------------------------------
+// Plugin Management Commands
+// ---------------------------------------------------------------------------
 
 use Webrium\Console\Plugin\PluginInstall;
 use Webrium\Console\Plugin\PluginUpdate;
@@ -45,23 +68,37 @@ use Webrium\Console\Plugin\PluginExport;
 
 use Symfony\Component\Console\Application;
 
+// ---------------------------------------------------------------------------
+// Framework Bootstrap
+// ---------------------------------------------------------------------------
 
+// Enable error display for debugging during CLI execution
 Debug::displayErrors(true);
 Debug::initialize();
+
+// Set up default directory structure (e.g., app, config, routes, etc.)
 Directory::initDefaultStructure();
+
+// Initialize the Webrium application from the current directory
 App::initialize(__DIR__);
 
+// ---------------------------------------------------------------------------
+// Console Application Setup
+// ---------------------------------------------------------------------------
 
 $application = new Application('Webrium Console');
 
+// Core initialization command
 $application->add(new InitWebrium());
+
+// Scaffolding / code generation commands
 $application->add(new GenerateModel());
 $application->add(new GenerateController());
 $application->add(new GenerateRoute());
 $application->add(new InitBot());
 $application->add(new CallController());
 
-// Plugin management commands
+// Plugin lifecycle management commands
 $application->add(new PluginInstall());
 $application->add(new PluginUpdate());
 $application->add(new PluginRemove());
@@ -69,5 +106,9 @@ $application->add(new PluginList());
 $application->add(new PluginInfo());
 $application->add(new PluginNew());
 $application->add(new PluginExport());
+
+// ---------------------------------------------------------------------------
+// Run
+// ---------------------------------------------------------------------------
 
 $application->run();
