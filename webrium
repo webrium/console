@@ -1,8 +1,10 @@
 <?php
 
+// test
+
 $paths = [
-    __DIR__ . '/vendor/autoload.php',      // مسیر فعلی
-    __DIR__ . '/../vendor/autoload.php',   // یک پوشه عقب‌تر
+    __DIR__ . '/vendor/autoload.php',
+    __DIR__ . '/../vendor/autoload.php',
 ];
 
 $autoload = null;
@@ -17,8 +19,7 @@ foreach ($paths as $path) {
 if ($autoload) {
     require $autoload;
 } else {
-    // نمایش خطا و خروج از برنامه در صورتی که فایل پیدا نشود
-    fwrite(STDERR, "\033[31mError:\033[0m Composer autoloader not found. Please run 'composer install' in your project root.\n");
+    echo("Composer autoloader not found. Please run 'composer install' in your project root.\n");
     exit(1);
 }
 
@@ -39,16 +40,19 @@ use Webrium\Console\Plugin\PluginUpdate;
 use Webrium\Console\Plugin\PluginRemove;
 use Webrium\Console\Plugin\PluginList;
 use Webrium\Console\Plugin\PluginInfo;
+use Webrium\Console\Plugin\PluginNew;
+use Webrium\Console\Plugin\PluginExport;
 
 use Symfony\Component\Console\Application;
 
 
 Debug::displayErrors(true);
+Debug::initialize();
 Directory::initDefaultStructure();
 App::initialize(__DIR__);
 
 
-$application = new Application();
+$application = new Application('Webrium Console');
 
 $application->add(new InitWebrium());
 $application->add(new GenerateModel());
@@ -63,5 +67,7 @@ $application->add(new PluginUpdate());
 $application->add(new PluginRemove());
 $application->add(new PluginList());
 $application->add(new PluginInfo());
+$application->add(new PluginNew());
+$application->add(new PluginExport());
 
 $application->run();

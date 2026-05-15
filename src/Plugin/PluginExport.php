@@ -21,7 +21,7 @@ class PluginExport extends Command
         Directory::initDefaultStructure();
         $this
             ->addArgument('name', InputArgument::REQUIRED, 'Plugin definition name (without .json)')
-            ->addOption('version',  null, InputOption::VALUE_OPTIONAL, 'Version to set (e.g. 1.2.0)')
+            ->addArgument('version', InputArgument::REQUIRED, 'Version to set (e.g. 1.2.0)')
             ->addOption('dry-run',  null, InputOption::VALUE_NONE,     'Preview without creating zip')
             ->addOption('force',    'f',  InputOption::VALUE_NONE,     'Overwrite existing zip if version already exists');
     }
@@ -57,7 +57,7 @@ class PluginExport extends Command
         }
 
         // 2. Resolve version
-        $version = $input->getOption('version');
+        $version = $input->getArgument('version');
         if (empty($version)) {
             $version = $io->ask(
                 'Plugin version',
@@ -125,10 +125,9 @@ class PluginExport extends Command
         @mkdir($distDir, 0755, true);
 
         foreach ($def['export'] as $entry) {
-            $abs     = realpath($projectRoot . '/' . ltrim($entry['file'], '/'));
-            $destDir = $tempDir . '/src/' . ltrim(dirname($entry['file']), '/');
-            @mkdir($destDir, 0755, true);
-            copy($abs, $destDir . '/' . basename($entry['file']));
+            $abs      = realpath($projectRoot . '/' . ltrim($entry['file'], '/'));
+            $fileName = basename($entry['file']);
+            copy($abs, $tempDir . '/src/' . $fileName);
         }
 
         // 7. Write plugin.json into zip root
@@ -163,7 +162,7 @@ class PluginExport extends Command
     private function buildManifest(array $def): array
     {
         $files = array_map(fn($e) => [
-            'src'       => ltrim($e['file'], '/'),
+            'src'       => basename($e['file']),
             'dest'      => $e['dest'],
             'subpath'   => $e['subpath'] ?? null,
             'overwrite' => $e['overwrite'] ?? false,
