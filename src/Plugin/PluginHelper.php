@@ -116,7 +116,7 @@ trait PluginHelper
 
     private function buildPlan(array $manifest, string $tempDir, SymfonyStyle $io): ?array
     {
-        $allowed     = ['php', 'html', 'htm', 'js', 'css', 'json', 'md', 'txt', 'svg', 'xml'];
+        $allowed     = ['php', 'html', 'htm', 'js', 'css', 'json', 'md', 'txt', 'svg', 'xml', 'vue'];
         $projectRoot = realpath(Directory::path('app') . '/../') ?: getcwd();
         $srcBase     = realpath($tempDir . '/src');
         $plan        = [];
