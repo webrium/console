@@ -306,8 +306,16 @@ trait PluginHelper
 
             $io->writeln("<fg=cyan>⚙ Running SQL:</> $relativePath");
 
+            // Split into individual statements and execute each one
+            $statements = array_filter(
+                array_map('trim', explode(';', $sql)),
+                fn($s) => $s !== ''
+            );
+
             try {
-                \Foxdb\DB::statement($sql);
+                foreach ($statements as $statement) {
+                    \Foxdb\DB::statement($statement);
+                }
                 $io->writeln("<fg=green>✔ SQL executed:</> $relativePath");
             } catch (\Exception $e) {
                 $io->error("SQL execution failed for '$relativePath': " . $e->getMessage());
