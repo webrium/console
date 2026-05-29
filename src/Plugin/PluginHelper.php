@@ -314,7 +314,7 @@ trait PluginHelper
 
             try {
                 foreach ($statements as $statement) {
-                    \Foxdb\DB::statement($statement);
+                    \Foxdb\DB::query($statement);
                 }
                 $io->writeln("<fg=green>✔ SQL executed:</> $relativePath");
             } catch (\Exception $e) {
