@@ -97,6 +97,20 @@ class PluginExport extends Command
             if (!$exists) $missing[] = $entry['file'];
         }
 
+        if (!empty($def['sql'])) {
+            $io->writeln('<fg=cyan>SQL files to include:</>');
+            foreach ($def['sql'] as $sqlFile) {
+                $abs = $projectRoot . '/' . ltrim($sqlFile, '/');
+                $abs = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $abs);
+
+                $exists = file_exists($abs);
+                $tag    = $exists ? '<fg=green>✔</>' : '<fg=red>✖</>';
+                $io->writeln("  $tag $sqlFile");
+
+                if (!$exists) $missing[] = $sqlFile;
+            }
+        }
+
         if (!empty($missing)) {
             $io->error('Cannot build: ' . count($missing) . ' file(s) not found.');
             return Command::FAILURE;
@@ -125,9 +139,25 @@ class PluginExport extends Command
         @mkdir($distDir, 0755, true);
 
         foreach ($def['export'] as $entry) {
-            $abs      = realpath($projectRoot . '/' . ltrim($entry['file'], '/'));
-            $fileName = basename($entry['file']);
-            copy($abs, $tempDir . '/src/' . $fileName);
+            $abs     = realpath($projectRoot . '/' . ltrim($entry['file'], '/'));
+            $relPath = ltrim(str_replace(['/', '\\'], '/', $entry['file']), '/');
+            $destPath = $tempDir . '/src/' . $relPath;
+            @mkdir(dirname($destPath), 0755, true);
+            copy($abs, $destPath);
+        }
+
+        // Copy SQL files into zip (preserving relative path)
+        foreach ($def['sql'] ?? [] as $relativePath) {
+            $abs = realpath($projectRoot . '/' . ltrim($relativePath, '/'));
+            if (!$abs || !file_exists($abs)) {
+                $io->error("SQL file not found: $relativePath");
+                $this->deleteDir($tempDir);
+                return Command::FAILURE;
+            }
+            $relPath  = ltrim(str_replace(['/', '\\'], '/', $relativePath), '/');
+            $destPath = $tempDir . '/src/' . $relPath;
+            @mkdir(dirname($destPath), 0755, true);
+            copy($abs, $destPath);
         }
 
         // 7. Write plugin.json into zip root
@@ -162,7 +192,7 @@ class PluginExport extends Command
     private function buildManifest(array $def): array
     {
         $files = array_map(fn($e) => [
-            'src'       => basename($e['file']),
+            'src'       => ltrim(str_replace(['/', '\\'], '/', $e['file']), '/'),
             'dest'      => $e['dest'],
             'subpath'   => $e['subpath'] ?? null,
             'overwrite' => $e['overwrite'] ?? false,
