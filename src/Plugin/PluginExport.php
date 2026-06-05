@@ -117,12 +117,12 @@ class PluginExport extends Command
         }
 
         // 5. Check output path
-        $distDir = Directory::path('storage_app') . '/plugins-dist';
+        $distDir = Directory::path('storage_app') . '/plugins/dist';
         $zipName = "{$def['name']}-v{$version}.zip";
         $zipPath = $distDir . '/' . $zipName;
 
         if (file_exists($zipPath) && !$force) {
-            $io->warning("'$zipName' already exists in plugins-dist. Use --force to overwrite.");
+            $io->warning("'$zipName' already exists in plugins/dist. Use --force to overwrite.");
             return Command::FAILURE;
         }
 
@@ -228,6 +228,6 @@ class PluginExport extends Command
 
     private function definitionPath(string $name): string
     {
-        return Directory::path('storage_app') . '/plugin-definitions/' . $name . '.json';
+        return Directory::path('storage_app') . '/plugins/definitions/' . $name . '.json';
     }
 }

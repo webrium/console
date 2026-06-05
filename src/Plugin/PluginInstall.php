@@ -138,7 +138,7 @@ class PluginInstall extends Command
                 $this->cleanupTemp($tempDir, $zipPath, $source);
                 return Command::FAILURE;
             }
-            $installed[] = $entry['dest'];
+            $installed[] = $this->toRelativePath($entry['dest']);
             $io->writeln("<fg=green>✔ Installed:</> {$entry['dest']}");
         }
 

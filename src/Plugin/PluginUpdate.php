@@ -115,8 +115,9 @@ class PluginUpdate extends Command
         // 11. Remove obsolete files (in old install but not in new manifest)
         $newFileNames = array_map(fn($e) => basename($e['src']), $manifest['files']);
         foreach ($existing['files'] as $oldFile) {
-            if (!in_array(basename($oldFile), $newFileNames, true) && file_exists($oldFile)) {
-                unlink($oldFile);
+            $oldFileAbs = $this->toAbsolutePath($oldFile);
+            if (!in_array(basename($oldFile), $newFileNames, true) && file_exists($oldFileAbs)) {
+                unlink($oldFileAbs);
                 $io->writeln("<fg=red>✖ Removed obsolete file:</> $oldFile");
             }
         }
@@ -130,7 +131,7 @@ class PluginUpdate extends Command
                 $this->cleanupTemp($tempDir, $zipPath, $source);
                 return Command::FAILURE;
             }
-            $installed[] = $entry['dest'];
+            $installed[] = $this->toRelativePath($entry['dest']);
             $io->writeln("<fg=green>✔ Updated:</> {$entry['dest']}");
         }
 
