@@ -239,12 +239,14 @@ trait PluginHelper
 
     private function registryPath(): string
     {
-        return Directory::path('storage_app') . '/plugins.json';
+        $dir = Directory::path('storage_app') . '/plugins';
+        @mkdir($dir, 0755, true);
+        return $dir . '/plugins.json';
     }
 
     private function backupFiles(array $files, string $pluginName, string $tag, SymfonyStyle $io): void
     {
-        $dir = Directory::path('storage_app') . '/plugin-backups/' . $pluginName . '_' . $tag . '_' . date('Ymd_His');
+        $dir = Directory::path('storage_app') . '/plugins/backups/' . $pluginName . '_' . $tag . '_' . date('Ymd_His');
         @mkdir($dir, 0755, true);
 
         foreach ($files as $file) {

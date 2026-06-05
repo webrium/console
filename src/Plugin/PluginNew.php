@@ -35,7 +35,7 @@ class PluginNew extends Command
             return Command::FAILURE;
         }
 
-        $defDir  = Directory::path('storage_app') . '/plugin-definitions';
+        $defDir  = Directory::path('storage_app') . '/plugins/definitions';
         $defPath = $defDir . '/' . $name . '.json';
 
         @mkdir($defDir, 0755, true);
