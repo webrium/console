@@ -48,7 +48,8 @@ class PluginRemove extends Command
         } else {
             $io->writeln('<fg=yellow>Files to be deleted:</>');
             foreach ($plugin['files'] as $file) {
-                $exists = file_exists($file) ? '' : ' <fg=gray>(not found)</>';
+                $fileAbs = $this->toAbsolutePath($file);
+                $exists = file_exists($fileAbs) ? '' : ' <fg=gray>(not found)</>';
                 $io->writeln("  <fg=red>✖</> $file$exists");
             }
         }
@@ -69,8 +70,9 @@ class PluginRemove extends Command
         // 4. Delete files
         if (!$keepFiles) {
             foreach ($plugin['files'] as $file) {
-                if (file_exists($file)) {
-                    unlink($file);
+                $fileAbs = $this->toAbsolutePath($file);
+                if (file_exists($fileAbs)) {
+                    unlink($fileAbs);
                     $io->writeln("<fg=red>✖ Deleted:</> $file");
                 }
             }

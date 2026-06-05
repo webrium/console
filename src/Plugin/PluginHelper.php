@@ -248,12 +248,36 @@ trait PluginHelper
         @mkdir($dir, 0755, true);
 
         foreach ($files as $file) {
+            $file = $this->toAbsolutePath($file);
             if (file_exists($file)) {
                 copy($file, $dir . '/' . basename($file) . '.bak');
             }
         }
 
         $io->writeln("<fg=yellow>⚠ Backup saved to:</> $dir");
+    }
+
+    private function projectRoot(): string
+    {
+        return rtrim(realpath(Directory::path('app') . '/../') ?: getcwd(), DIRECTORY_SEPARATOR);
+    }
+
+    private function toRelativePath(string $absolutePath): string
+    {
+        $root = $this->projectRoot() . DIRECTORY_SEPARATOR;
+        if (str_starts_with($absolutePath, $root)) {
+            return substr($absolutePath, strlen($root));
+        }
+        return $absolutePath;
+    }
+
+    private function toAbsolutePath(string $path): string
+    {
+        // اگر از قبل absolute است (پلاگین‌های نصب‌شده با نسخه قدیمی) دست نمی‌زنیم
+        if (str_starts_with($path, DIRECTORY_SEPARATOR) || preg_match('/^[A-Z]:\\\\/i', $path)) {
+            return $path;
+        }
+        return $this->projectRoot() . DIRECTORY_SEPARATOR . $path;
     }
 
     private function cleanupTemp(string $tempDir, string $zipPath, string $source): void
