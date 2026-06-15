@@ -100,7 +100,7 @@ trait PluginHelper
         }
 
         foreach (['name', 'version', 'files'] as $field) {
-            if (empty($data[$field])) {
+            if (!isset($data[$field]) || ($field !== 'files' && empty($data[$field]))) {
                 $io->error("plugin.json missing required field: '$field'.");
                 return null;
             }
