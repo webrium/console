@@ -41,6 +41,7 @@ if ($autoload) {
 use Webrium\App;
 use Webrium\Console\InitWebrium;
 use Webrium\File;
+use Webrium\Kernel;
 use Webrium\Debug;
 use Webrium\Directory;
 
@@ -87,7 +88,7 @@ App::initialize(__DIR__);
 // Set up default directory structure (e.g., app, config, routes, etc.)
 Directory::initDefaultStructure();
 
-File::source('config', ['DB.php', 'Config.php']);
+Kernel::source('config', ['DB.php']);
 
 
 // ---------------------------------------------------------------------------
