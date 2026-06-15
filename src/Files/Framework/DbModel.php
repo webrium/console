@@ -1,16 +1,17 @@
 <?php
 namespace App\Models;
 
-use Foxdb\Model;
+use Foxdb\Eloquent\Model;
+
 
 class DbModel extends Model{
 
   /**
-  * The table associated with the model.
+  * The database table associated with this model.
   *
   * @var string
   */
-  protected $table = 'model_db';
+  protected string $table = 'model_db';
 
 
 }
