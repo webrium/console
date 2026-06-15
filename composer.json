@@ -8,8 +8,8 @@
             "email": "nvioir@gmail.com"
         }
     ],
-    "require":{
-      "symfony/console": "^6.4"
+    "require": {
+        "symfony/console": "^6.4"
     },
     "minimum-stability": "dev",
     "autoload": {
@@ -17,7 +17,11 @@
             "Webrium\\Console\\": "src/"
         }
     },
+    "scripts": {
+        "test": "phpunit --verbose --testdox --colors tests "
+    },
     "require-dev": {
-        "webrium/core": "dev-master"
+        "webrium/core": "dev-master",
+        "phpunit/phpunit": "^9.6"
     }
 }
