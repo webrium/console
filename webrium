@@ -111,6 +111,8 @@ $application->add(new DbAction());
 $application->add(new LogAction());
 $application->add(new GenerateMigration());
 $application->add(new MigrateAction());
+$application->add(new GenerateSeeder());
+$application->add(new SeedAction());
 
 // Plugin lifecycle management commands
 $application->add(new PluginInstall());
