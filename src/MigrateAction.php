@@ -11,6 +11,8 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Foxdb\Migrations\Migrator;
 use Foxdb\Migrations\MigrationResult;
+use Foxdb\Seeders\SeederRunner;
+use Foxdb\Seeders\SeederResult;
 use Webrium\Directory;
 
 class MigrateAction extends Command
@@ -34,6 +36,7 @@ class MigrateAction extends Command
             ->addArgument('action', InputArgument::OPTIONAL, 'Action to perform (run, rollback, reset, refresh, status)', self::ACTION_RUN)
             ->addOption('step', null, InputOption::VALUE_OPTIONAL, 'Number of migrations to run or roll back', null)
             ->addOption('connection', 'c', InputOption::VALUE_OPTIONAL, 'Named database connection to use', null)
+            ->addOption('seed', null, InputOption::VALUE_NONE, 'Run seeders after a successful run or refresh')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Force the operation without confirmation');
     }
 
@@ -89,7 +92,13 @@ class MigrateAction extends Command
 
         $results = $migrator->run($step);
 
-        return $this->renderResults($io, $results, 'Migrating');
+        $status = $this->renderResults($io, $results, 'Migrating');
+
+        if ($status === Command::SUCCESS && $input->getOption('seed')) {
+            return $this->runSeeders($input, $output, $io);
+        }
+
+        return $status;
     }
 
     /**
@@ -156,7 +165,7 @@ class MigrateAction extends Command
         $up_status = $this->renderResults($io, $result['up'], 'Migrating');
 
         return ($down_status === Command::SUCCESS && $up_status === Command::SUCCESS)
-            ? Command::SUCCESS
+            ? ($input->getOption('seed') ? $this->runSeeders($input, $output, $io) : Command::SUCCESS)
             : Command::FAILURE;
     }
 
@@ -257,6 +266,58 @@ class MigrateAction extends Command
         }
 
         $io->success(ucfirst($title) . ' completed successfully.');
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Runs all seeders found in the seeders directory.
+     * Used when the --seed flag is passed to migrate run / refresh.
+     *
+     * @return int Command::SUCCESS or Command::FAILURE
+     */
+    private function runSeeders(InputInterface $input, OutputInterface $output, SymfonyStyle $io): int
+    {
+        $seeders_dir = Directory::path('seeders');
+        if (!is_dir($seeders_dir)) {
+            $io->writeln('<info>No seeders directory; skipping --seed.</info>');
+            return Command::SUCCESS;
+        }
+
+        $runner = new SeederRunner($seeders_dir, $input->getOption('connection'));
+
+        $files = $runner->getSeederFiles();
+        if (empty($files)) {
+            $io->writeln('<info>No seeders to run.</info>');
+            return Command::SUCCESS;
+        }
+
+        $results = $runner->runAll();
+
+        $io->title('Seeding');
+
+        $rows = array_map(function (SeederResult $result) {
+            return [
+                $result->name,
+                $result->success ? '<fg=green>OK</>' : '<fg=red>FAILED</>',
+                number_format($result->timeMs, 2) . ' ms',
+            ];
+        }, $results);
+
+        $table = new \Symfony\Component\Console\Helper\Table($output);
+        $table->setHeaders(['Seeder', 'Status', 'Time']);
+        $table->setRows($rows);
+        $table->render();
+
+        $failed = array_filter($results, fn(SeederResult $r) => !$r->success);
+
+        if (!empty($failed)) {
+            foreach ($failed as $result) {
+                $io->error("{$result->name}: {$result->error}");
+            }
+            return Command::FAILURE;
+        }
+
+        $io->success('Seeding completed successfully.');
         return Command::SUCCESS;
     }
 }
