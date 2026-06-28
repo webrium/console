@@ -15,6 +15,8 @@ use Webrium\Console\GenerateModel;
 use Webrium\Console\GenerateRoute;
 use Webrium\Console\InitWebrium;
 use Webrium\Console\LogAction;
+use Webrium\Console\GenerateSeeder;
+use Webrium\Console\SeedAction;
 use Webrium\Console\Plugin\PluginHelper;
 use Webrium\Console\Plugin\PluginNew;
 use Webrium\Console\Plugin\PluginList;
@@ -61,7 +63,7 @@ class ConsoleTest extends TestCase
         // ساخت ساختار پوشه‌ها
         foreach ([
             'app/Controllers', 'app/Models', 'app/Routes',
-            'app/Config', 'storage/Logs', 'storage/App',
+            'app/Config', 'storage/logs', 'storage/app',
         ] as $dir) {
             mkdir($this->tmpDir . '/' . $dir, 0755, true);
         }
@@ -313,7 +315,7 @@ class ConsoleTest extends TestCase
 
     public function testLogListShowsAvailableLogs(): void
     {
-        file_put_contents($this->tmpDir . '/storage/Logs/error_2026_06_01.txt', 'some error');
+        file_put_contents($this->tmpDir . '/storage/logs/error_2026_06_01.txt', 'some error');
 
         $tester = $this->tester(new LogAction());
         $tester->execute(['action' => 'list']);
@@ -332,18 +334,18 @@ class ConsoleTest extends TestCase
 
     public function testLogClearRemovesLogFiles(): void
     {
-        file_put_contents($this->tmpDir . '/storage/Logs/error_old.txt', 'error');
+        file_put_contents($this->tmpDir . '/storage/logs/error_old.txt', 'error');
 
         $tester = $this->tester(new LogAction());
         $tester->execute(['action' => 'clear']);
 
         $this->assertSame(0, $tester->getStatusCode());
-        $this->assertFileDoesNotExist($this->tmpDir . '/storage/Logs/error_old.txt');
+        $this->assertFileDoesNotExist($this->tmpDir . '/storage/logs/error_old.txt');
     }
 
     public function testLogLatestShowsMostRecentFile(): void
     {
-        file_put_contents($this->tmpDir . '/storage/Logs/error_2026_06_15.txt', '##Error A#line1##Error B#line2');
+        file_put_contents($this->tmpDir . '/storage/logs/error_2026_06_15.txt', '##Error A#line1##Error B#line2');
 
         $tester = $this->tester(new LogAction());
         $tester->execute(['action' => 'latest']);
@@ -363,7 +365,7 @@ class ConsoleTest extends TestCase
 
     public function testLogFileShowsSpecificFile(): void
     {
-        file_put_contents($this->tmpDir . '/storage/Logs/specific.txt', '##Error X#details');
+        file_put_contents($this->tmpDir . '/storage/logs/specific.txt', '##Error X#details');
 
         $tester = $this->tester(new LogAction());
         $tester->execute(['action' => 'file', 'name' => 'specific.txt']);
@@ -399,7 +401,7 @@ class ConsoleTest extends TestCase
 
         $this->assertSame(0, $tester->getStatusCode());
 
-        $defPath = $this->tmpDir . '/storage/App/plugins/definitions/my-plugin.json';
+        $defPath = $this->tmpDir . '/storage/app/plugins/definitions/my-plugin.json';
         $this->assertFileExists($defPath);
 
         $data = json_decode(file_get_contents($defPath), true);
@@ -718,7 +720,7 @@ class ConsoleTest extends TestCase
 
         $this->assertSame(0, $tester->getStatusCode());
 
-        $zipPath = $this->tmpDir . '/storage/App/plugins/dist/exp2-plugin-v1.0.0.zip';
+        $zipPath = $this->tmpDir . '/storage/app/plugins/dist/exp2-plugin-v1.0.0.zip';
         $this->assertFileDoesNotExist($zipPath);
     }
 
@@ -731,7 +733,7 @@ class ConsoleTest extends TestCase
 
         $this->assertSame(0, $tester->getStatusCode());
 
-        $zipPath = $this->tmpDir . '/storage/App/plugins/dist/exp3-plugin-v1.5.0.zip';
+        $zipPath = $this->tmpDir . '/storage/app/plugins/dist/exp3-plugin-v1.5.0.zip';
         $this->assertFileExists($zipPath);
 
         // بررسی که zip معتبر است
@@ -930,7 +932,7 @@ class ConsoleTest extends TestCase
         $controllerFile = $this->tmpDir . "/app/Controllers/{$controllerName}.php";
         file_put_contents($controllerFile, "<?php class $controllerName {}");
 
-        $defPath = $this->tmpDir . "/storage/App/plugins/definitions/{$pluginName}.json";
+        $defPath = $this->tmpDir . "/storage/app/plugins/definitions/{$pluginName}.json";
         $def = json_decode(file_get_contents($defPath), true);
         $def['export'] = [
             [
@@ -948,7 +950,7 @@ class ConsoleTest extends TestCase
      */
     private function writeRegistry(array $data): void
     {
-        $dir = $this->tmpDir . '/storage/App/plugins';
+        $dir = $this->tmpDir . '/storage/app/plugins';
         @mkdir($dir, 0755, true);
         file_put_contents($dir . '/plugins.json', json_encode($data));
     }
@@ -958,7 +960,7 @@ class ConsoleTest extends TestCase
      */
     private function readRegistry(): array
     {
-        $path = $this->tmpDir . '/storage/App/plugins/plugins.json';
+        $path = $this->tmpDir . '/storage/app/plugins/plugins.json';
         if (!file_exists($path)) return ['installed' => []];
         return json_decode(file_get_contents($path), true);
     }
@@ -997,5 +999,193 @@ class ConsoleTest extends TestCase
         $ref = new \ReflectionMethod($obj, $method);
         $ref->setAccessible(true);
         return $ref->invoke($obj, ...$args);
+    }
+
+    // =========================================================================
+    // §14 GenerateSeeder (make:seeder)
+    // =========================================================================
+
+    public function testMakeSeederCreatesFile(): void
+    {
+        $tester = $this->tester(new GenerateSeeder());
+        $tester->execute(['name' => 'UsersSeeder']);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertFileExists($this->tmpDir . '/database/seeders/UsersSeeder.php');
+    }
+
+    public function testMakeSeederContainsCorrectClass(): void
+    {
+        $tester = $this->tester(new GenerateSeeder());
+        $tester->execute(['name' => 'UsersSeeder']);
+
+        $content = file_get_contents($this->tmpDir . '/database/seeders/UsersSeeder.php');
+        $this->assertStringContainsString('class UsersSeeder extends Seeder', $content);
+        $this->assertStringContainsString('use Foxdb\\Seeders\\Seeder;', $content);
+        $this->assertStringContainsString('public function run()', $content);
+    }
+
+    public function testMakeSeederConvertsSnakeCaseToPascalCase(): void
+    {
+        $tester = $this->tester(new GenerateSeeder());
+        $tester->execute(['name' => 'roles_seeder']);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertFileExists($this->tmpDir . '/database/seeders/RolesSeeder.php');
+        $content = file_get_contents($this->tmpDir . '/database/seeders/RolesSeeder.php');
+        $this->assertStringContainsString('class RolesSeeder', $content);
+    }
+
+    public function testMakeSeederFailsOnInvalidName(): void
+    {
+        $tester = $this->tester(new GenerateSeeder());
+        $tester->execute(['name' => '123invalid']);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('Invalid seeder name', $tester->getDisplay());
+    }
+
+    public function testMakeSeederFailsIfFileExistsWithoutForce(): void
+    {
+        $tester = $this->tester(new GenerateSeeder());
+        $tester->execute(['name' => 'DuplicateSeeder']);
+        $tester->execute(['name' => 'DuplicateSeeder']);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('already exists', $tester->getDisplay());
+    }
+
+    public function testMakeSeederOverwritesWithForce(): void
+    {
+        $tester = $this->tester(new GenerateSeeder());
+        $tester->execute(['name' => 'ForceSeeder']);
+        $tester->execute(['name' => 'ForceSeeder', '--force' => true]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+    }
+
+    public function testMakeSeederCreatesDirectoryIfMissing(): void
+    {
+        // The setUp() does not pre-create database/seeders; the command must.
+        $this->assertDirectoryDoesNotExist($this->tmpDir . '/database/seeders');
+
+        $tester = $this->tester(new GenerateSeeder());
+        $tester->execute(['name' => 'BootstrapSeeder']);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertDirectoryExists($this->tmpDir . '/database/seeders');
+    }
+
+    // =========================================================================
+    // §15 SeedAction (db:seed)
+    // =========================================================================
+
+    /**
+     * Register a fresh in-memory SQLite connection and create the test table
+     * the seed-time tests insert into. Called per seed-test.
+     */
+    private function bootSeederDb(): void
+    {
+        \Foxdb\DB::reset();
+        \Foxdb\DB::addConnection([
+            'driver'   => 'sqlite',
+            'database' => ':memory:',
+        ]);
+
+        \Foxdb\Schema::create('seed_test_users', function (\Foxdb\Schema\Blueprint $t) {
+            $t->id();
+            $t->string('name');
+        });
+    }
+
+    private function writeSeederFile(string $name, string $body): void
+    {
+        $dir = $this->tmpDir . '/database/seeders';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $content = "<?php\nuse Foxdb\\DB;\nuse Foxdb\\Seeders\\Seeder;\nclass {$name} extends Seeder {\n    public function run(): void {\n{$body}\n    }\n}\n";
+        file_put_contents("$dir/{$name}.php", $content);
+    }
+
+    public function testSeedRunsAllSeeders(): void
+    {
+        $this->bootSeederDb();
+        $this->writeSeederFile('SeedAll_Users', "        DB::table('seed_test_users')->insert(['name' => 'alice']);");
+        $this->writeSeederFile('SeedAll_More',  "        DB::table('seed_test_users')->insert(['name' => 'bob']);");
+
+        $tester = $this->tester(new SeedAction());
+        $tester->execute([]);
+
+        $this->assertSame(0, $tester->getStatusCode(), $tester->getDisplay());
+        $this->assertSame(2, (int) \Foxdb\DB::table('seed_test_users')->count());
+    }
+
+    public function testSeedRunsSingleSeederByFileName(): void
+    {
+        $this->bootSeederDb();
+        $this->writeSeederFile('SeedSingle_Only',  "        DB::table('seed_test_users')->insert(['name' => 'one']);");
+        $this->writeSeederFile('SeedSingle_Other', "        DB::table('seed_test_users')->insert(['name' => 'two']);");
+
+        $tester = $this->tester(new SeedAction());
+        $tester->execute(['class' => 'SeedSingle_Only']);
+
+        $this->assertSame(0, $tester->getStatusCode(), $tester->getDisplay());
+        $rows = \Foxdb\DB::table('seed_test_users')->get()->all();
+        $this->assertCount(1, $rows);
+        $this->assertSame('one', $rows[0]->name);
+    }
+
+    public function testSeedFailsWhenSeedersDirMissing(): void
+    {
+        $this->bootSeederDb();
+        // Intentionally do not create database/seeders.
+
+        $tester = $this->tester(new SeedAction());
+        $tester->execute([]);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        // Output is line-wrapped by SymfonyStyle, so collapse whitespace before matching.
+        $display = preg_replace('/\s+/', ' ', $tester->getDisplay());
+        $this->assertStringContainsString('does not exist', $display);
+    }
+
+    public function testSeedReportsNoSeedersWhenDirIsEmpty(): void
+    {
+        $this->bootSeederDb();
+        mkdir($this->tmpDir . '/database/seeders', 0755, true);
+
+        $tester = $this->tester(new SeedAction());
+        $tester->execute([]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('No seeders', $tester->getDisplay());
+    }
+
+    public function testSeedReportsFailureWhenSeederThrows(): void
+    {
+        $this->bootSeederDb();
+        $this->writeSeederFile('SeedFail_Boom', "        throw new \\RuntimeException('intentional failure');");
+
+        $tester = $this->tester(new SeedAction());
+        $tester->execute([]);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+        $this->assertStringContainsString('FAILED', $display);
+        $this->assertStringContainsString('intentional failure', $display);
+    }
+
+    public function testSeedReportsFailureForMissingSingleSeeder(): void
+    {
+        $this->bootSeederDb();
+        mkdir($this->tmpDir . '/database/seeders', 0755, true);
+
+        $tester = $this->tester(new SeedAction());
+        $tester->execute(['class' => 'NoSuchSeeder']);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('not found', $tester->getDisplay());
     }
 }
