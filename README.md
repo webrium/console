@@ -24,7 +24,9 @@ composer require webrium/console
 | `make:controller` | Generate a controller file |
 | `make:route` | Generate a route file |
 | `make:migration` | Generate a database migration file |
+| `make:seeder` | Generate a database seeder file |
 | `migrate` | Run, roll back, or inspect database migrations |
+| `db:seed` | Run database seeders |
 | `call` | Call a method on a controller or model |
 | `db` | Manage databases |
 | `table` | Manage database tables and execute SQL files |
@@ -178,6 +180,7 @@ php webrium migrate [<action>] [--step=<n>] [--connection=<name>] [--force]
 |---|---|
 | `--step` | Limit `run`/`rollback` to a specific number of migrations |
 | `--connection, -c` | Run against a named connection instead of the default one |
+| `--seed` | After a successful `run` or `refresh`, also run every seeder in `database/seeders` |
 | `--force, -f` | Skip the confirmation prompt for `reset`/`refresh` |
 
 ```bash
@@ -205,9 +208,102 @@ php webrium migrate refresh --force
 
 # Run against a non-default connection
 php webrium migrate --connection=secondary
+
+# Apply pending migrations, then run all seeders
+php webrium migrate --seed
+
+# Reset, re-run, and re-seed in one command
+php webrium migrate refresh --seed --force
 ```
 
 Each migration runs inside its own database transaction. If a migration fails, `migrate` stops and reports it — earlier migrations in the same run stay applied, matching the underlying `Migrator::run()` behavior.
+
+---
+
+## `make:seeder`
+
+Generates a seeder class in `database/seeders`. Seeders populate the database with default or test data (admin users, lookup tables, categories, etc.) and are built on top of [`webrium/foxdb`](https://github.com/webrium/foxdb)'s `Foxdb\Seeders\Seeder` base class.
+
+```bash
+php webrium make:seeder <Name> [--force]
+```
+
+| Argument / Option | Description |
+|---|---|
+| `Name` | Seeder class name (e.g. `UsersSeeder`). Auto-converted to PascalCase if given in snake_case |
+| `--force, -f` | Overwrite if the file already exists |
+
+```bash
+php webrium make:seeder UsersSeeder
+php webrium make:seeder roles_seeder        # generated as RolesSeeder.php
+php webrium make:seeder UsersSeeder --force
+```
+
+The generated stub looks like:
+
+```php
+<?php
+
+use Foxdb\DB;
+use Foxdb\Seeders\Seeder;
+
+class UsersSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // DB::table('users')->insert([
+        //     'name'  => 'Admin',
+        //     'email' => 'admin@example.com',
+        // ]);
+
+        // To call other seeders:
+        // $this->call(RolesSeeder::class);
+    }
+}
+```
+
+Inside a seeder you can chain to other seeders with `$this->call(...)`, which accepts a class name or an array of class names. This is the recommended way to build a master seeder that orchestrates the others.
+
+---
+
+## `db:seed`
+
+Runs database seeders from `database/seeders` using [`webrium/foxdb`](https://github.com/webrium/foxdb)'s `SeederRunner`. Unlike migrations, seeders are **not tracked** — every invocation runs them fresh, so they should be written to be idempotent if you intend to run them more than once.
+
+```bash
+php webrium db:seed [<class>] [--connection=<name>] [--no-transaction] [--force]
+```
+
+| Argument / Option | Description |
+|---|---|
+| `class` | Optional. Class or file name of a single seeder to run. If omitted, every seeder in `database/seeders` is executed in alphabetical order |
+| `--connection, -c` | Run against a named connection instead of the default one |
+| `--no-transaction` | Do not wrap each seeder in a transaction (use when seeders contain DDL or are intentionally non-atomic) |
+| `--force, -f` | Skip the production confirmation prompt (relevant only when `APP_ENV=production`) |
+
+```bash
+# Run every seeder in database/seeders
+php webrium db:seed
+
+# Run a single seeder by file name
+php webrium db:seed UsersSeeder
+
+# Run a single seeder by fully qualified class name
+php webrium db:seed "App\\Seeders\\UsersSeeder"
+
+# Use a non-default connection
+php webrium db:seed --connection=secondary
+
+# Disable the per-seeder transaction
+php webrium db:seed --no-transaction
+
+# Run in production without an interactive prompt
+APP_ENV=production php webrium db:seed --force
+```
+
+Each seeder runs inside its own transaction by default, so a failure mid-seed rolls back any inserts from that seeder. If a seeder fails, `db:seed` stops and reports it — seeders that already completed remain applied.
+
+When `APP_ENV` is set to `production` (or `prod`), `db:seed` asks for confirmation before running. Pass `--force` to bypass the prompt in automated environments.
 
 ---
 
