@@ -56,6 +56,8 @@ use Webrium\Console\CallController;
 use Webrium\Console\TableAction;
 use Webrium\Console\DbAction;
 use Webrium\Console\LogAction;
+use Webrium\Console\GenerateMigration;
+use Webrium\Console\MigrateAction;
 
 // ---------------------------------------------------------------------------
 // Plugin Management Commands
@@ -107,6 +109,8 @@ $application->add(new CallController());
 $application->add(new TableAction());
 $application->add(new DbAction());
 $application->add(new LogAction());
+$application->add(new GenerateMigration());
+$application->add(new MigrateAction());
 
 // Plugin lifecycle management commands
 $application->add(new PluginInstall());
