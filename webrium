@@ -58,6 +58,8 @@ use Webrium\Console\DbAction;
 use Webrium\Console\LogAction;
 use Webrium\Console\GenerateMigration;
 use Webrium\Console\MigrateAction;
+use Webrium\Console\GenerateSeeder;
+use Webrium\Console\SeedAction;
 
 // ---------------------------------------------------------------------------
 // Plugin Management Commands
