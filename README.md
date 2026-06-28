@@ -23,11 +23,12 @@ composer require webrium/console
 | `make:model` | Generate a model file |
 | `make:controller` | Generate a controller file |
 | `make:route` | Generate a route file |
+| `make:migration` | Generate a database migration file |
+| `migrate` | Run, roll back, or inspect database migrations |
 | `call` | Call a method on a controller or model |
 | `db` | Manage databases |
 | `table` | Manage database tables and execute SQL files |
 | `log` | Manage log files |
-| `botfire:init` | Initialize a Telegram bot |
 | `plugin:install` | Install a plugin |
 | `plugin:update` | Update an installed plugin |
 | `plugin:remove` | Remove an installed plugin |
@@ -115,6 +116,98 @@ php webrium make:route <Name> [--force]
 php webrium make:route Api
 php webrium make:route Web --force
 ```
+
+---
+
+## `make:migration`
+
+Generates a timestamped migration file in `database/migrations`. Builds on top of [`webrium/foxdb`](https://github.com/webrium/foxdb)'s migration system (`Foxdb\Migrations\Migration`, `Schema`, `Blueprint`).
+
+```bash
+php webrium make:migration <name> [--table=<table>] [--force]
+```
+
+| Argument / Option | Description |
+|---|---|
+| `name` | Migration name, e.g. `create_posts_table` or `add_status_to_posts_table` |
+| `--table, -t` | Explicit table name. If omitted, it's inferred from the migration name |
+| `--force, -f` | Allow generating another migration with the same descriptive name |
+
+The generated stub depends on the naming convention used:
+
+- **`create_..._table`** → uses the *create* stub, with `Schema::create()` already wired up and a ready-to-run `id()` + `timestamps()` example.
+- **`add_..._to_..._table`** / **`remove_..._from_..._table`** → uses the *update* stub, with an empty `Schema::table()` block in both `up()` and `down()` for you to fill in.
+- Anything else falls back to the *create* stub.
+
+In every case the table name is inferred automatically from the migration name, unless `--table` is given explicitly.
+
+```bash
+# Create stub — Schema::create('posts', ...) is pre-filled
+php webrium make:migration create_posts_table
+
+# Update stub — Schema::table('posts', ...) with an empty body
+php webrium make:migration add_status_to_posts_table
+php webrium make:migration remove_legacy_id_from_posts_table
+
+# Explicit table name, useful when the migration name doesn't follow either convention
+php webrium make:migration setup_indexes --table=posts
+
+# Allow a duplicate descriptive name (creates a second, separately timestamped file)
+php webrium make:migration create_posts_table --force
+```
+
+---
+
+## `migrate`
+
+Runs database migrations from `database/migrations` using [`webrium/foxdb`](https://github.com/webrium/foxdb)'s `Migrator`. Tracks applied migrations in a `migrations` table, batched the same way per run so a whole batch can be rolled back together.
+
+```bash
+php webrium migrate [<action>] [--step=<n>] [--connection=<name>] [--force]
+```
+
+| Action | Description |
+|---|---|
+| `run` *(default)* | Apply all pending migrations |
+| `rollback` | Roll back the last batch (or `--step` migrations) |
+| `reset` | Roll back every migration that has been run |
+| `refresh` | Roll back everything, then run all migrations again |
+| `status` | Show which migrations have run, and in which batch |
+
+| Option | Description |
+|---|---|
+| `--step` | Limit `run`/`rollback` to a specific number of migrations |
+| `--connection, -c` | Run against a named connection instead of the default one |
+| `--force, -f` | Skip the confirmation prompt for `reset`/`refresh` |
+
+```bash
+# Apply all pending migrations
+php webrium migrate
+php webrium migrate run
+
+# Show migration status
+php webrium migrate status
+
+# Roll back the most recent batch
+php webrium migrate rollback
+
+# Roll back only the last 2 migrations
+php webrium migrate rollback --step=2
+
+# Roll back everything, with confirmation
+php webrium migrate reset
+
+# Roll back everything, skipping the confirmation prompt
+php webrium migrate reset --force
+
+# Roll back and re-run all migrations
+php webrium migrate refresh --force
+
+# Run against a non-default connection
+php webrium migrate --connection=secondary
+```
+
+Each migration runs inside its own database transaction. If a migration fails, `migrate` stops and reports it — earlier migrations in the same run stay applied, matching the underlying `Migrator::run()` behavior.
 
 ---
 
@@ -232,29 +325,6 @@ php webrium log latest
 php webrium log file 2024-01-15.log
 php webrium log clear
 ```
-
----
-
-## `botfire:init`
-
-Scaffolds the files needed to connect a Telegram bot to your Webrium project.
-
-```bash
-php webrium botfire:init [<token>] [--debug=<chat_id>] [--force]
-```
-
-| Argument / Option | Description |
-|---|---|
-| `token` | Your Telegram bot token (optional at this stage) |
-| `--debug` | Chat ID to receive error messages in debug mode |
-| `--force, -f` | Overwrite existing bot files |
-
-```bash
-php webrium botfire:init 123456:ABC-DEF
-php webrium botfire:init 123456:ABC-DEF --debug=987654321
-```
-
-The command copies route and controller files for the bot and adds the token and debug settings to your `.env` file.
 
 ---
 
