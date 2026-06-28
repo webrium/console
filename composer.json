@@ -22,6 +22,7 @@
     },
     "require-dev": {
         "webrium/core": "dev-master",
+        "webrium/foxdb": "^4.0",
         "phpunit/phpunit": "^9.6"
     }
 }
