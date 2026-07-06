@@ -69,7 +69,9 @@ class DbAction extends Command
     {
         $io = new SymfonyStyle($input, $output);
         try {
-            $res = DB::query('SHOW DATABASES;', [], true);
+            // FoxDB v5 removed DB::query(). Use DB::select() for raw SELECT
+            // statements; it returns array<int, object> (FETCH_OBJ by default).
+            $res = DB::select('SHOW DATABASES;');
             $rows = array_map(fn($row) => [$row->Database], $res); // Use -> instead of ['Database']
         } catch (\Exception $e) {
             $io->error("Failed to retrieve databases: " . $e->getMessage());
@@ -102,15 +104,34 @@ class DbAction extends Command
             return Command::FAILURE;
         }
 
+        $tempConnection = null;
+        $rows = [];
+
         try {
             if ($use) {
-                DB::useOnce($use);
+                // FoxDB v5 removed DB::useOnce(). We emulate the same behavior by
+                // registering a temporary connection that points to the requested
+                // database, executing the query against it, and then disconnecting
+                // so the default connection is left untouched.
+                $config = DB::connection()->getConfig();
+                $config['database'] = $use;
+                $tempConnection = '__console_use_' . $use;
+                DB::addConnection($config, $tempConnection);
             }
-            $res = DB::query('SHOW TABLES;', [], true);
+
+            // FoxDB v5: DB::select() accepts an optional 3rd argument to target a
+            // named connection without changing the default one.
+            $res = DB::select('SHOW TABLES;', [], $tempConnection);
             $rows = array_map(fn($row) => [array_values((array)$row)[0]], $res); // Convert stdClass to array for table name
         } catch (\Exception $e) {
             $io->error("Failed to retrieve tables: " . $e->getMessage());
             return Command::FAILURE;
+        } finally {
+            // Always clean up the temporary connection so the default connection
+            // is restored to its original database for any subsequent commands.
+            if ($tempConnection !== null) {
+                DB::disconnect($tempConnection);
+            }
         }
 
         $io->title('Table List' . ($use ? " (Database: $use)" : ''));
@@ -145,7 +166,9 @@ class DbAction extends Command
         }
 
         try {
-            $status = DB::query("CREATE DATABASE IF NOT EXISTS `$name`");
+            // FoxDB v5: use DB::statement() for raw DDL (CREATE/DROP/ALTER)
+            // instead of the removed DB::query(). It returns bool.
+            $status = DB::statement("CREATE DATABASE IF NOT EXISTS `$name`");
             if (!$status) {
                 $io->error("Failed to create database '$name'.");
                 return Command::FAILURE;
@@ -190,7 +213,8 @@ class DbAction extends Command
         }
 
         try {
-            DB::query("DROP DATABASE IF EXISTS `$name`");
+            // FoxDB v5: use DB::statement() for raw DDL (DROP DATABASE).
+            DB::statement("DROP DATABASE IF EXISTS `$name`");
         } catch (\Exception $e) {
             $io->error("Failed to drop database '$name': " . $e->getMessage());
             return Command::FAILURE;
