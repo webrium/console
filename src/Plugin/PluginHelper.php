@@ -340,7 +340,12 @@ trait PluginHelper
 
             try {
                 foreach ($statements as $statement) {
-                    \Foxdb\DB::query($statement);
+                    // FoxDB v5: DB::query() was removed. Use DB::statement()
+                    // for raw SQL execution (DDL or DML). It runs via PDO::exec()
+                    // and returns bool. SQL file statements here are arbitrary
+                    // schema / data statements, so statement() is the correct
+                    // replacement.
+                    \Foxdb\DB::statement($statement);
                 }
                 $io->writeln("<fg=green>✔ SQL executed:</> $relativePath");
             } catch (\Exception $e) {
