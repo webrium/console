@@ -116,7 +116,11 @@ trait PluginHelper
 
     private function buildPlan(array $manifest, string $tempDir, SymfonyStyle $io): ?array
     {
-        $allowed     = ['php', 'html', 'htm', 'js', 'css', 'json', 'md', 'txt', 'svg', 'xml', 'vue'];
+        $allowed     = [
+            'php', 'html', 'htm', 'js', 'css', 'json', 'md', 'txt', 'svg', 'xml', 'vue',
+            'png', 'jpg', 'jpeg', 'webp', 'ico',
+        ];
+        $rasterImages = ['png', 'jpg', 'jpeg', 'webp', 'ico'];
         $projectRoot = realpath(Directory::path('app') . '/../') ?: getcwd();
         $srcBase     = realpath($tempDir . '/src');
         $plan        = [];
@@ -129,7 +133,7 @@ trait PluginHelper
 
             $ext = strtolower(pathinfo($entry['src'], PATHINFO_EXTENSION));
             if (!in_array($ext, $allowed, true)) {
-                $io->error("Disallowed extension '.$ext' in '{$entry['src']}'.");
+                $io->error("Disallowed extension '$ext' in '{$entry['src']}'.");
                 return null;
             }
 
@@ -141,6 +145,11 @@ trait PluginHelper
 
             if (!str_starts_with($srcPath, $srcBase)) {
                 $io->error("Path traversal detected in src: '{$entry['src']}'.");
+                return null;
+            }
+
+            if (in_array($ext, $rasterImages, true) && !$this->hasValidRasterSignature($srcPath, $ext)) {
+                $io->error("File contents do not match the '$ext' extension in '{$entry['src']}'.");
                 return null;
             }
 
@@ -173,6 +182,35 @@ trait PluginHelper
         }
 
         return $plan;
+    }
+
+    /**
+     * Verify common raster formats by their binary signatures so an executable
+     * or arbitrary file cannot be accepted merely by changing its extension.
+     */
+    private function hasValidRasterSignature(string $path, string $extension): bool
+    {
+        $handle = @fopen($path, 'rb');
+        if ($handle === false) {
+            return false;
+        }
+
+        $header = fread($handle, 12);
+        fclose($handle);
+
+        if (!is_string($header)) {
+            return false;
+        }
+
+        return match ($extension) {
+            'png' => str_starts_with($header, "\x89PNG\r\n\x1a\n"),
+            'jpg', 'jpeg' => str_starts_with($header, "\xff\xd8\xff"),
+            'webp' => strlen($header) >= 12
+                && substr($header, 0, 4) === 'RIFF'
+                && substr($header, 8, 4) === 'WEBP',
+            'ico' => str_starts_with($header, "\x00\x00\x01\x00"),
+            default => false,
+        };
     }
 
     private function runHooks(array $hooks, string $stage, SymfonyStyle $io): bool
