@@ -839,6 +839,83 @@ class ConsoleTest extends TestCase
         unlink($zipPath);
     }
 
+    public function testBuildPlanAcceptsSupportedRasterImageSignatures(): void
+    {
+        $helper = $this->makeHelperInstance();
+        $dir = $this->tmpDir . '/raster_plugin';
+        mkdir($dir . '/src/assets', 0755, true);
+
+        $fixtures = [
+            'image.png' => "\x89PNG\r\n\x1a\nfixture",
+            'image.jpg' => "\xff\xd8\xfffixture",
+            'image.jpeg' => "\xff\xd8\xfffixture",
+            'image.webp' => 'RIFF' . pack('V', 4) . 'WEBP',
+            'image.ico' => "\x00\x00\x01\x00fixture",
+        ];
+
+        $files = [];
+        foreach ($fixtures as $name => $contents) {
+            file_put_contents($dir . '/src/assets/' . $name, $contents);
+            $files[] = [
+                'src' => 'assets/' . $name,
+                'dest' => 'assets',
+                'subpath' => 'theme',
+            ];
+        }
+
+        $result = $this->callHelperMethod(
+            $helper,
+            'buildPlan',
+            [['files' => $files], $dir, $this->makeNullIo()]
+        );
+
+        $this->assertIsArray($result);
+        $this->assertCount(count($fixtures), $result);
+    }
+
+    public function testBuildPlanRejectsRasterImageWithInvalidSignature(): void
+    {
+        $helper = $this->makeHelperInstance();
+        $dir = $this->tmpDir . '/invalid_raster_plugin';
+        mkdir($dir . '/src/assets', 0755, true);
+        file_put_contents($dir . '/src/assets/payload.png', '<?php echo "unsafe";');
+
+        $manifest = ['files' => [[
+            'src' => 'assets/payload.png',
+            'dest' => 'assets',
+            'subpath' => 'theme',
+        ]]];
+
+        $result = $this->callHelperMethod(
+            $helper,
+            'buildPlan',
+            [$manifest, $dir, $this->makeNullIo()]
+        );
+
+        $this->assertNull($result);
+    }
+
+    public function testBuildPlanStillRejectsZipFiles(): void
+    {
+        $helper = $this->makeHelperInstance();
+        $dir = $this->tmpDir . '/zip_asset_plugin';
+        mkdir($dir . '/src/assets', 0755, true);
+        file_put_contents($dir . '/src/assets/theme.zip', "PK\x03\x04fixture");
+
+        $manifest = ['files' => [[
+            'src' => 'assets/theme.zip',
+            'dest' => 'assets',
+        ]]];
+
+        $result = $this->callHelperMethod(
+            $helper,
+            'buildPlan',
+            [$manifest, $dir, $this->makeNullIo()]
+        );
+
+        $this->assertNull($result);
+    }
+
     public function testRegistryReadReturnsEmptyWhenNoFile(): void
     {
         $helper = $this->makeHelperInstance();
