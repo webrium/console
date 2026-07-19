@@ -288,9 +288,20 @@ trait PluginHelper
         @mkdir($dir, 0755, true);
 
         foreach ($files as $file) {
-            $file = $this->toAbsolutePath($file);
-            if (file_exists($file)) {
-                copy($file, $dir . '/' . basename($file) . '.bak');
+            $absolutePath = $this->toAbsolutePath($file);
+            if (file_exists($absolutePath)) {
+                $relativePath = $this->toRelativePath($absolutePath);
+                $isAbsolute = str_starts_with($relativePath, DIRECTORY_SEPARATOR)
+                    || preg_match('/^[A-Z]:\\\\/i', $relativePath);
+                $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
+
+                if ($isAbsolute || $relativePath === '' || str_starts_with($relativePath, '../')) {
+                    $relativePath = 'external/' . sha1($absolutePath) . '-' . basename($absolutePath);
+                }
+
+                $backupPath = $dir . '/' . $relativePath . '.bak';
+                @mkdir(dirname($backupPath), 0755, true);
+                copy($absolutePath, $backupPath);
             }
         }
 
