@@ -441,9 +441,12 @@ class ConsoleTest extends TestCase
         $this->assertSame(0, $tester->getStatusCode());
     }
 
-    public function testPluginNewUsesAuthoringRootFromProjectConfig(): void
+    public function testPluginNewUsesConfiguredDefinitionsPath(): void
     {
-        $this->writeWebriumConfig('org-plugins');
+        $this->writeConsolePluginPaths([
+            'definitions' => 'org-plugins/definitions',
+            'dist' => 'org-plugins/dist',
+        ]);
 
         $tester = $this->tester(new PluginNew());
         $tester->execute(['name' => 'configured-plugin']);
@@ -453,19 +456,19 @@ class ConsoleTest extends TestCase
         $this->assertFileDoesNotExist($this->tmpDir . '/storage/app/plugins/definitions/configured-plugin.json');
     }
 
-    public function testPluginNewAuthoringRootOptionOverridesProjectConfig(): void
+    public function testPluginNewRejectsRemovedAuthoringRootSetting(): void
     {
-        $this->writeWebriumConfig('configured-plugins');
+        file_put_contents(
+            $this->tmpDir . '/.webrium.conf.json',
+            json_encode(['console' => ['authoring_root' => 'org-plugins']])
+        );
 
         $tester = $this->tester(new PluginNew());
-        $tester->execute([
-            'name' => 'override-plugin',
-            '--authoring-root' => 'option-plugins',
-        ]);
+        $tester->execute(['name' => 'removed-setting-plugin']);
 
-        $this->assertSame(0, $tester->getStatusCode());
-        $this->assertFileExists($this->tmpDir . '/option-plugins/definitions/override-plugin.json');
-        $this->assertFileDoesNotExist($this->tmpDir . '/configured-plugins/definitions/override-plugin.json');
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('not supported', $tester->getDisplay());
+        $this->assertStringContainsString('console.plugins.definitions', $tester->getDisplay());
     }
 
     public function testPluginNewFailsOnInvalidProjectConfigJson(): void
@@ -479,13 +482,12 @@ class ConsoleTest extends TestCase
         $this->assertStringContainsString('is not valid JSON', $tester->getDisplay());
     }
 
-    public function testPluginNewRejectsAuthoringRootPathTraversal(): void
+    public function testPluginNewRejectsConfiguredDefinitionsPathTraversal(): void
     {
+        $this->writeConsolePluginPaths(['definitions' => '../outside-project']);
+
         $tester = $this->tester(new PluginNew());
-        $tester->execute([
-            'name' => 'unsafe-plugin',
-            '--authoring-root' => '../outside-project',
-        ]);
+        $tester->execute(['name' => 'unsafe-plugin']);
 
         $this->assertSame(1, $tester->getStatusCode());
         $this->assertStringContainsString('path traversal', $tester->getDisplay());
@@ -887,10 +889,13 @@ class ConsoleTest extends TestCase
         $zip->close();
     }
 
-    public function testPluginExportUsesConfiguredAuthoringRootAndUpdatesDefinition(): void
+    public function testPluginExportUsesConfiguredPathsAndUpdatesDefinition(): void
     {
-        $this->writeWebriumConfig('org-plugins');
-        $this->createExportDefinition('configured-export', 'ConfiguredController', 'org-plugins');
+        $this->writeConsolePluginPaths([
+            'definitions' => 'org-plugins/definitions',
+            'dist' => 'org-plugins/dist',
+        ]);
+        $this->createExportDefinition('configured-export', 'ConfiguredController', 'org-plugins/definitions');
 
         $tester = $this->tester(new PluginExport());
         $tester->execute(['name' => 'configured-export', 'version' => '2.3.4']);
@@ -906,10 +911,13 @@ class ConsoleTest extends TestCase
         $this->assertSame('2.3.4', $definition['version']);
     }
 
-    public function testPluginExportDryRunUsesConfiguredRootWithoutWriting(): void
+    public function testPluginExportDryRunUsesConfiguredPathsWithoutWriting(): void
     {
-        $this->writeWebriumConfig('org-plugins');
-        $this->createExportDefinition('configured-dry-run', 'DryRunController', 'org-plugins');
+        $this->writeConsolePluginPaths([
+            'definitions' => 'org-plugins/definitions',
+            'dist' => 'org-plugins/dist',
+        ]);
+        $this->createExportDefinition('configured-dry-run', 'DryRunController', 'org-plugins/definitions');
 
         $tester = $this->tester(new PluginExport());
         $tester->execute([
@@ -927,28 +935,6 @@ class ConsoleTest extends TestCase
             true
         );
         $this->assertSame('1.0.0', $definition['version']);
-    }
-
-    public function testPluginExportAuthoringRootOptionOverridesProjectConfig(): void
-    {
-        $this->writeWebriumConfig('configured-plugins');
-        $this->createExportDefinition(
-            'option-export',
-            'OptionController',
-            'option-plugins',
-            ['--authoring-root' => 'option-plugins']
-        );
-
-        $tester = $this->tester(new PluginExport());
-        $tester->execute([
-            'name' => 'option-export',
-            'version' => '4.0.0',
-            '--authoring-root' => 'option-plugins',
-        ]);
-
-        $this->assertSame(0, $tester->getStatusCode());
-        $this->assertFileExists($this->tmpDir . '/option-plugins/dist/option-export-v4.0.0.zip');
-        $this->assertFileDoesNotExist($this->tmpDir . '/configured-plugins/dist/option-export-v4.0.0.zip');
     }
 
     // =========================================================================
@@ -1460,17 +1446,16 @@ class ConsoleTest extends TestCase
     private function createExportDefinition(
         string $pluginName,
         string $controllerName,
-        string $authoringRoot = 'storage/app/plugins',
-        array $newOptions = []
+        string $definitionsDirectory = 'storage/app/plugins/definitions'
     ): void
     {
         // ساخت definition
-        $this->tester(new PluginNew())->execute(array_merge(['name' => $pluginName], $newOptions));
+        $this->tester(new PluginNew())->execute(['name' => $pluginName]);
 
         $controllerFile = $this->tmpDir . "/app/Controllers/{$controllerName}.php";
         file_put_contents($controllerFile, "<?php class $controllerName {}");
 
-        $defPath = $this->tmpDir . "/{$authoringRoot}/definitions/{$pluginName}.json";
+        $defPath = $this->tmpDir . "/{$definitionsDirectory}/{$pluginName}.json";
         $def = json_decode(file_get_contents($defPath), true);
         $def['export'] = [
             [
@@ -1481,18 +1466,6 @@ class ConsoleTest extends TestCase
             ],
         ];
         file_put_contents($defPath, json_encode($def));
-    }
-
-    private function writeWebriumConfig(string $authoringRoot): void
-    {
-        file_put_contents(
-            $this->tmpDir . '/.webrium.conf.json',
-            json_encode([
-                'console' => [
-                    'authoring_root' => $authoringRoot,
-                ],
-            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
-        );
     }
 
     private function writeConsolePluginPaths(array $paths): void

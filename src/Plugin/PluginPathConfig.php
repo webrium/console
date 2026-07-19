@@ -24,12 +24,9 @@ final class PluginPathConfig
     /**
      * Resolve every plugin-system path to an absolute path inside the project.
      *
-     * The legacy authoring_root setting and command option remain supported as
-     * shorthands for the definitions and dist directories.
-     *
      * @return array<string, string>|null
      */
-    public static function resolve(SymfonyStyle $io, ?string $authoringRootOption = null): ?array
+    public static function resolve(SymfonyStyle $io): ?array
     {
         $projectRoot = self::projectRoot();
         $values = self::DEFAULTS;
@@ -45,15 +42,12 @@ final class PluginPathConfig
             return null;
         }
 
-        $legacyRoot = $authoringRootOption ?? ($console->authoring_root ?? null);
-        if ($legacyRoot !== null) {
-            if (!is_string($legacyRoot) || trim($legacyRoot) === '') {
-                $io->error("The 'console.authoring_root' value in " . self::CONFIG_FILE . ' must be a non-empty string.');
-                return null;
-            }
-
-            $values['definitions'] = rtrim(str_replace('\\', '/', $legacyRoot), '/') . '/definitions';
-            $values['dist'] = rtrim(str_replace('\\', '/', $legacyRoot), '/') . '/dist';
+        if (property_exists($console, 'authoring_root')) {
+            $io->error(
+                "The 'console.authoring_root' setting is not supported. "
+                . "Configure 'console.plugins.definitions' and 'console.plugins.dist' instead."
+            );
+            return null;
         }
 
         if (property_exists($console, 'plugins')) {
@@ -76,13 +70,6 @@ final class PluginPathConfig
                 }
                 $values[$key] = $value;
             }
-        }
-
-        // A CLI authoring root must have the highest priority.
-        if ($authoringRootOption !== null) {
-            $root = rtrim(str_replace('\\', '/', $authoringRootOption), '/');
-            $values['definitions'] = $root . '/definitions';
-            $values['dist'] = $root . '/dist';
         }
 
         $resolved = [];

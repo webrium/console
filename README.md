@@ -437,8 +437,8 @@ php webrium plugin:update  <source> [--force] [--no-backup]
 php webrium plugin:remove  <name>   [--no-backup] [--keep-files]
 php webrium plugin:list
 php webrium plugin:info    <source>
-php webrium plugin:new     <name> [--authoring-root=<path>] [--force]
-php webrium plugin:export  <name> <version> [--authoring-root=<path>] [--dry-run] [--force]
+php webrium plugin:new     <name> [--force]
+php webrium plugin:export  <name> <version> [--dry-run] [--force]
 php webrium plugin:config:compile [--dry-run]
 ```
 
@@ -491,17 +491,8 @@ php webrium plugin:export admin-panel 1.2.0 --dry-run
 php webrium plugin:export admin-panel 1.2.0
 ```
 
-The command-line option takes precedence over `.webrium.conf.json`:
-
-```bash
-php webrium plugin:export admin-panel 1.2.0 --authoring-root=another-repository
-```
-
-The legacy `console.authoring_root` setting remains supported as a shorthand
-for `<authoring_root>/definitions` and `<authoring_root>/dist`. Explicit
-`console.plugins.definitions` and `console.plugins.dist` values are preferred
-for new projects. Existing projects without configuration retain the original
-paths.
+`console.plugins` is the only configuration source for plugin-system paths.
+Projects without this configuration retain the original default paths.
 
 ### Project overrides and compiled configuration
 
