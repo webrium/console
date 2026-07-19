@@ -735,6 +735,99 @@ class ConsoleTest extends TestCase
         unlink($zipV2);
     }
 
+    public function testPluginUpdatePreservesRuntimeFieldsAndReplacesPackageMetadataInPlace(): void
+    {
+        $zipV1 = $this->buildValidPluginZip('stateful-plugin', '1.0.0', '<?php // v1', [
+            'description' => 'Old description',
+            'author' => 'Old author',
+            'meta' => ['routes' => [['name' => 'old-route']]],
+        ]);
+        $this->tester(new PluginInstall())->execute(['source' => $zipV1]);
+        unlink($zipV1);
+
+        $registry = $this->readRegistry();
+        $installedAt = $registry['installed'][0]['installed_at'];
+        $registry['installed'][0]['status'] = 'disabled';
+        $registry['installed'][0]['active'] = false;
+        $registry['installed'][0]['project_settings'] = ['color' => 'blue'];
+        $registry['installed'][] = [
+            'name' => 'neighbor-plugin',
+            'version' => '1.0.0',
+            'files' => [],
+        ];
+        $this->writeRegistry($registry);
+
+        $zipV2 = $this->buildValidPluginZip('stateful-plugin', '2.0.0', '<?php // v2', [
+            'description' => 'New description',
+            'author' => 'New author',
+            'meta' => ['routes' => [['name' => 'new-route']]],
+        ]);
+        $tester = $this->tester(new PluginUpdate());
+        $tester->execute(['source' => $zipV2, '--no-backup' => true]);
+        unlink($zipV2);
+
+        $this->assertSame(0, $tester->getStatusCode());
+
+        $updatedRegistry = $this->readRegistry();
+        $this->assertSame('stateful-plugin', $updatedRegistry['installed'][0]['name']);
+        $this->assertSame('neighbor-plugin', $updatedRegistry['installed'][1]['name']);
+
+        $updated = $updatedRegistry['installed'][0];
+        $this->assertSame('2.0.0', $updated['version']);
+        $this->assertSame('New description', $updated['description']);
+        $this->assertSame('New author', $updated['author']);
+        $this->assertSame(['routes' => [['name' => 'new-route']]], $updated['meta']);
+        $this->assertSame('disabled', $updated['status']);
+        $this->assertFalse($updated['active']);
+        $this->assertSame($installedAt, $updated['installed_at']);
+        $this->assertSame(['color' => 'blue'], $updated['project_settings']);
+        $this->assertArrayHasKey('updated_at', $updated);
+    }
+
+    public function testPluginUpdateUsesFullPathsForObsoleteFilesAndBackupCollisions(): void
+    {
+        $zipV1 = $this->buildPluginZipWithFiles('collision-plugin', '1.0.0', [
+            [
+                'src' => 'app/Controllers/Shared.php',
+                'dest' => 'controllers',
+                'content' => '<?php // controller-v1',
+            ],
+            [
+                'src' => 'app/Models/Shared.php',
+                'dest' => 'models',
+                'content' => '<?php // model-v1',
+            ],
+        ]);
+        $this->tester(new PluginInstall())->execute(['source' => $zipV1]);
+        unlink($zipV1);
+
+        $zipV2 = $this->buildPluginZipWithFiles('collision-plugin', '2.0.0', [
+            [
+                'src' => 'app/Models/Shared.php',
+                'dest' => 'models',
+                'content' => '<?php // model-v2',
+            ],
+        ]);
+        $tester = $this->tester(new PluginUpdate());
+        $tester->execute(['source' => $zipV2]);
+        unlink($zipV2);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertFileDoesNotExist($this->tmpDir . '/app/Controllers/Shared.php');
+        $this->assertSame('<?php // model-v2', file_get_contents($this->tmpDir . '/app/Models/Shared.php'));
+
+        $backupDirs = glob($this->tmpDir . '/storage/app/plugins/backups/collision-plugin_v1.0.0_*');
+        $this->assertCount(1, $backupDirs);
+        $this->assertSame(
+            '<?php // controller-v1',
+            file_get_contents($backupDirs[0] . '/app/Controllers/Shared.php.bak')
+        );
+        $this->assertSame(
+            '<?php // model-v1',
+            file_get_contents($backupDirs[0] . '/app/Models/Shared.php.bak')
+        );
+    }
+
     // =========================================================================
     // §12 PluginExport
     // =========================================================================
@@ -1065,34 +1158,60 @@ class ConsoleTest extends TestCase
     /**
      * یک zip معتبر با plugin.json و یک فایل controller می‌سازد
      */
-    private function buildValidPluginZip(string $name, string $version, string $fileContent = '<?php // demo'): string
+    private function buildValidPluginZip(
+        string $name,
+        string $version,
+        string $fileContent = '<?php // demo',
+        array $manifestOverrides = []
+    ): string
+    {
+        return $this->buildPluginZipWithFiles($name, $version, [[
+            'src' => 'app/Controllers/DemoController.php',
+            'dest' => 'controllers',
+            'content' => $fileContent,
+        ]], $manifestOverrides);
+    }
+
+    private function buildPluginZipWithFiles(
+        string $name,
+        string $version,
+        array $files,
+        array $manifestOverrides = []
+    ): string
     {
         $tempDir = $this->tmpDir . '/zip_build_' . uniqid();
-        mkdir($tempDir . '/src/app/Controllers', 0755, true);
+        mkdir($tempDir . '/src', 0755, true);
 
-        file_put_contents($tempDir . '/src/app/Controllers/DemoController.php', $fileContent);
+        $manifestFiles = [];
+        foreach ($files as $file) {
+            $sourcePath = $tempDir . '/src/' . $file['src'];
+            if (!is_dir(dirname($sourcePath))) {
+                mkdir(dirname($sourcePath), 0755, true);
+            }
+            file_put_contents($sourcePath, $file['content']);
 
-        $manifest = [
+            $manifestFiles[] = [
+                'src' => $file['src'],
+                'dest' => $file['dest'],
+                'subpath' => $file['subpath'] ?? null,
+                'overwrite' => $file['overwrite'] ?? false,
+            ];
+        }
+
+        $manifest = array_replace([
             'name'    => $name,
             'version' => $version,
-            'files'   => [
-                [
-                    'src'       => 'app/Controllers/DemoController.php',
-                    'dest'      => 'controllers',
-                    'overwrite' => false,
-                ],
-            ],
-        ];
+            'files'   => $manifestFiles,
+        ], $manifestOverrides);
         file_put_contents($tempDir . '/plugin.json', json_encode($manifest));
 
         $zipPath = $this->tmpDir . "/{$name}-{$version}.zip";
         $zip = new \ZipArchive();
         $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
         $zip->addFile($tempDir . '/plugin.json', 'plugin.json');
-        $zip->addFile(
-            $tempDir . '/src/app/Controllers/DemoController.php',
-            'src/app/Controllers/DemoController.php'
-        );
+        foreach ($files as $file) {
+            $zip->addFile($tempDir . '/src/' . $file['src'], 'src/' . $file['src']);
+        }
         $zip->close();
 
         $this->removeDir($tempDir);

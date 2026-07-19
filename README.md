@@ -448,6 +448,12 @@ php webrium plugin:install https://example.com/releases/my-plugin.zip
 php webrium plugin:install https://github.com/user/repo/releases/download/v1.0.0/plugin.zip
 ```
 
+When `plugin:update` succeeds, package-owned fields (`name`, `version`,
+`description`, `author`, `hash`, `files`, and `meta`) are refreshed from the new
+package. Project/runtime fields (`status`, `active`, and `installed_at`) and
+unknown extension fields are preserved. The plugin also remains in its existing
+registry position. Backups preserve project-relative paths so files with the
+same basename do not overwrite one another.
 ### Separate plugin authoring repository
 
 By default, `plugin:new` reads and writes definitions under

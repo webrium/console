@@ -112,11 +112,15 @@ class PluginUpdate extends Command
             $this->backupFiles($existing['files'], $manifest['name'], "v{$currentVersion}", $io);
         }
 
-        // 11. Remove obsolete files (in old install but not in new manifest)
-        $newFileNames = array_map(fn($e) => basename($e['src']), $manifest['files']);
+        // 11. Remove obsolete files (in old install but not in new plan)
+        $newInstalledPaths = array_map(
+            fn($entry) => $this->normalizeRegistryPath($this->toRelativePath($entry['dest'])),
+            $plan
+        );
         foreach ($existing['files'] as $oldFile) {
             $oldFileAbs = $this->toAbsolutePath($oldFile);
-            if (!in_array(basename($oldFile), $newFileNames, true) && file_exists($oldFileAbs)) {
+            $oldRegistryPath = $this->normalizeRegistryPath($this->toRelativePath($oldFileAbs));
+            if (!in_array($oldRegistryPath, $newInstalledPaths, true) && file_exists($oldFileAbs)) {
                 unlink($oldFileAbs);
                 $io->writeln("<fg=red>✖ Removed obsolete file:</> $oldFile");
             }
@@ -141,27 +145,36 @@ class PluginUpdate extends Command
             return Command::FAILURE;
         }
 
-        // 14. Update registry
-        $registry['installed'] = array_values(array_filter(
-            $registry['installed'],
-            fn($p) => $p['name'] !== $manifest['name']
-        ));
-
-        $registry['installed'][] = [
+        // 14. Update registry in place. Package-owned fields are refreshed,
+        // while project/runtime fields and unknown extension fields survive.
+        $updatedPlugin = array_replace($existing, [
             'name'         => $manifest['name'],
             'version'      => $newVersion,
             'description'  => $manifest['description'] ?? '',
             'author'       => $manifest['author'] ?? '',
-            'installed_at' => $existing['installed_at'],
+            'installed_at' => $existing['installed_at'] ?? date('Y-m-d H:i:s'),
             'updated_at'   => date('Y-m-d H:i:s'),
             'hash'         => $zipHash,
             'files'        => $installed,
-        ];
+            'meta'         => $manifest['meta'] ?? [],
+        ]);
+
+        foreach ($registry['installed'] as $index => $plugin) {
+            if ($plugin['name'] === $manifest['name']) {
+                $registry['installed'][$index] = $updatedPlugin;
+                break;
+            }
+        }
         $this->saveRegistry($registry);
 
         $this->cleanupTemp($tempDir, $zipPath, $source);
         $io->success("Plugin '{$manifest['name']}' updated to v$newVersion successfully.");
 
         return Command::SUCCESS;
+    }
+
+    private function normalizeRegistryPath(string $path): string
+    {
+        return ltrim(str_replace('\\', '/', $path), '/');
     }
 }
