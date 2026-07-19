@@ -22,6 +22,7 @@ class PluginExport extends Command
         $this
             ->addArgument('name', InputArgument::REQUIRED, 'Plugin definition name (without .json)')
             ->addArgument('version', InputArgument::REQUIRED, 'Version to set (e.g. 1.2.0)')
+            ->addOption('authoring-root', null, InputOption::VALUE_REQUIRED, 'Plugin authoring repository root (relative to the project root)')
             ->addOption('dry-run',  null, InputOption::VALUE_NONE,     'Preview without creating zip')
             ->addOption('force',    'f',  InputOption::VALUE_NONE,     'Overwrite existing zip if version already exists');
     }
@@ -35,11 +36,20 @@ class PluginExport extends Command
 
         if ($dryRun) $io->note('Dry-run mode: no zip will be created.');
 
+        $authoringRoot = PluginAuthoringConfig::resolve($input->getOption('authoring-root'), $io);
+        if ($authoringRoot === null) {
+            return Command::FAILURE;
+        }
+
         // 1. Load definition
-        $defPath = $this->definitionPath($name);
+        $defPath = $this->definitionPath($authoringRoot, $name);
         if (!file_exists($defPath)) {
             $io->error("Definition file not found: $defPath");
-            $io->writeln('Create it with: <fg=cyan>php webrium plugin:new ' . $name . '</>');
+            $newCommand = 'php webrium plugin:new ' . $name;
+            if ($input->getOption('authoring-root') !== null) {
+                $newCommand .= ' --authoring-root=' . $input->getOption('authoring-root');
+            }
+            $io->writeln('Create it with: <fg=cyan>' . $newCommand . '</>');
             return Command::FAILURE;
         }
 
@@ -117,12 +127,12 @@ class PluginExport extends Command
         }
 
         // 5. Check output path
-        $distDir = Directory::path('storage_app') . '/plugins/dist';
+        $distDir = $authoringRoot . '/dist';
         $zipName = "{$def['name']}-v{$version}.zip";
         $zipPath = $distDir . '/' . $zipName;
 
         if (file_exists($zipPath) && !$force) {
-            $io->warning("'$zipName' already exists in plugins/dist. Use --force to overwrite.");
+            $io->warning("'$zipName' already exists in the authoring dist directory. Use --force to overwrite.");
             return Command::FAILURE;
         }
 
@@ -226,8 +236,8 @@ class PluginExport extends Command
         }
     }
 
-    private function definitionPath(string $name): string
+    private function definitionPath(string $authoringRoot, string $name): string
     {
-        return Directory::path('storage_app') . '/plugins/definitions/' . $name . '.json';
+        return $authoringRoot . '/definitions/' . $name . '.json';
     }
 }

@@ -36,6 +36,8 @@ composer require webrium/console
 | `plugin:remove` | Remove an installed plugin |
 | `plugin:list` | List installed plugins |
 | `plugin:info` | Preview a plugin without installing |
+| `plugin:new` | Create a plugin authoring definition |
+| `plugin:export` | Export a distributable plugin package |
 
 ---
 
@@ -434,6 +436,8 @@ php webrium plugin:update  <source> [--force] [--no-backup]
 php webrium plugin:remove  <name>   [--no-backup] [--keep-files]
 php webrium plugin:list
 php webrium plugin:info    <source>
+php webrium plugin:new     <name> [--authoring-root=<path>] [--force]
+php webrium plugin:export  <name> <version> [--authoring-root=<path>] [--dry-run] [--force]
 ```
 
 The `source` argument accepts a local `.zip` file path or an `https://` URL:
@@ -443,6 +447,43 @@ php webrium plugin:install ./my-plugin.zip
 php webrium plugin:install https://example.com/releases/my-plugin.zip
 php webrium plugin:install https://github.com/user/repo/releases/download/v1.0.0/plugin.zip
 ```
+
+### Separate plugin authoring repository
+
+By default, `plugin:new` reads and writes definitions under
+`storage/app/plugins/definitions`, and `plugin:export` writes packages under
+`storage/app/plugins/dist`. Runtime registry and backup files always remain
+under `storage/app/plugins`.
+
+Plugin authors may keep definitions and exported packages in a separate
+repository by creating `.webrium.conf.json` in the project root:
+
+```json
+{
+  "console": {
+    "authoring_root": "org-plugins"
+  }
+}
+```
+
+With this configuration, definitions live under `org-plugins/definitions` and
+exported packages are written to `org-plugins/dist`:
+
+```bash
+php webrium plugin:new admin-panel
+php webrium plugin:export admin-panel 1.2.0 --dry-run
+php webrium plugin:export admin-panel 1.2.0
+```
+
+The command-line option takes precedence over `.webrium.conf.json`:
+
+```bash
+php webrium plugin:export admin-panel 1.2.0 --authoring-root=another-repository
+```
+
+Authoring roots must be relative paths that remain inside the project. Existing
+projects without this configuration retain the original
+`storage/app/plugins` behavior.
 
 For full documentation on creating and distributing plugins, see the **[Plugin System Wiki](https://github.com/webrium/console/wiki/webrium-plugin-system)**.
 

@@ -21,6 +21,7 @@ class PluginNew extends Command
         Directory::initDefaultStructure();
         $this
             ->addArgument('name', InputArgument::REQUIRED, 'Plugin name (e.g. admin-panel)')
+            ->addOption('authoring-root', null, InputOption::VALUE_REQUIRED, 'Plugin authoring repository root (relative to the project root)')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Overwrite if definition already exists');
     }
 
@@ -35,10 +36,18 @@ class PluginNew extends Command
             return Command::FAILURE;
         }
 
-        $defDir  = Directory::path('storage_app') . '/plugins/definitions';
+        $authoringRoot = PluginAuthoringConfig::resolve($input->getOption('authoring-root'), $io);
+        if ($authoringRoot === null) {
+            return Command::FAILURE;
+        }
+
+        $defDir  = $authoringRoot . '/definitions';
         $defPath = $defDir . '/' . $name . '.json';
 
-        @mkdir($defDir, 0755, true);
+        if (!is_dir($defDir) && !@mkdir($defDir, 0755, true) && !is_dir($defDir)) {
+            $io->error("Unable to create plugin definitions directory: $defDir");
+            return Command::FAILURE;
+        }
 
         if (file_exists($defPath) && !$force) {
             $io->error("Definition '$name.json' already exists. Use --force to overwrite.");
@@ -67,13 +76,20 @@ class PluginNew extends Command
             'meta' => [],
         ];
 
-        file_put_contents($defPath, json_encode($template, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        if (file_put_contents($defPath, json_encode($template, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) === false) {
+            $io->error("Unable to write plugin definition: $defPath");
+            return Command::FAILURE;
+        }
 
         $io->title("Plugin Definition Created");
         $io->writeln("<fg=green>✔ Definition file:</> $defPath");
         $io->newLine();
         $io->writeln('Edit the file and add your files to the <fg=cyan>export</> array.');
-        $io->writeln('Then run: <fg=cyan>php webrium plugin:export ' . $name . '</>');
+        $exportCommand = 'php webrium plugin:export ' . $name . ' <version>';
+        if ($input->getOption('authoring-root') !== null) {
+            $exportCommand .= ' --authoring-root=' . $input->getOption('authoring-root');
+        }
+        $io->writeln('Then run: <fg=cyan>' . $exportCommand . '</>');
 
         return Command::SUCCESS;
     }
