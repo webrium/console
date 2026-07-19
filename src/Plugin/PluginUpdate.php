@@ -32,6 +32,10 @@ class PluginUpdate extends Command
         $force    = $input->getOption('force');
         $noBackup = $input->getOption('no-backup');
 
+        if (!$this->initializePluginPaths($io)) {
+            return Command::FAILURE;
+        }
+
         // 1. Resolve source
         $zipPath = $this->resolveSource($source, $io);
         if ($zipPath === null) return Command::FAILURE;

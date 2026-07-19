@@ -38,6 +38,7 @@ composer require webrium/console
 | `plugin:info` | Preview a plugin without installing |
 | `plugin:new` | Create a plugin authoring definition |
 | `plugin:export` | Export a distributable plugin package |
+| `plugin:config:compile` | Compile the plugin registry with project overrides |
 
 ---
 
@@ -438,6 +439,7 @@ php webrium plugin:list
 php webrium plugin:info    <source>
 php webrium plugin:new     <name> [--authoring-root=<path>] [--force]
 php webrium plugin:export  <name> <version> [--authoring-root=<path>] [--dry-run] [--force]
+php webrium plugin:config:compile [--dry-run]
 ```
 
 The `source` argument accepts a local `.zip` file path or an `https://` URL:
@@ -454,26 +456,34 @@ package. Project/runtime fields (`status`, `active`, and `installed_at`) and
 unknown extension fields are preserved. The plugin also remains in its existing
 registry position. Backups preserve project-relative paths so files with the
 same basename do not overwrite one another.
-### Separate plugin authoring repository
+### Plugin paths and a separate authoring repository
 
 By default, `plugin:new` reads and writes definitions under
 `storage/app/plugins/definitions`, and `plugin:export` writes packages under
-`storage/app/plugins/dist`. Runtime registry and backup files always remain
-under `storage/app/plugins`.
+`storage/app/plugins/dist`. The installed registry, optional project overrides,
+compiled output, and backups also use their conventional project paths.
 
-Plugin authors may keep definitions and exported packages in a separate
-repository by creating `.webrium.conf.json` in the project root:
+Every path can be configured independently in `.webrium.conf.json`. Paths must
+be relative to the project root and may not escape it:
 
 ```json
 {
   "console": {
-    "authoring_root": "org-plugins"
+    "plugins": {
+      "registry": "storage/app/plugins/plugins.json",
+      "overrides": "storage/app/plugins/plugins.overrides.json",
+      "compiled": "storage/framework/cache/plugins.compiled.json",
+      "definitions": "org-plugins/definitions",
+      "dist": "org-plugins/dist",
+      "backups": "storage/app/plugins/backups"
+    }
   }
 }
 ```
 
-With this configuration, definitions live under `org-plugins/definitions` and
-exported packages are written to `org-plugins/dist`:
+This keeps project-owned registry and override files in the project repository,
+while definitions and distributable packages can live in a dedicated authoring
+repository:
 
 ```bash
 php webrium plugin:new admin-panel
@@ -487,9 +497,48 @@ The command-line option takes precedence over `.webrium.conf.json`:
 php webrium plugin:export admin-panel 1.2.0 --authoring-root=another-repository
 ```
 
-Authoring roots must be relative paths that remain inside the project. Existing
-projects without this configuration retain the original
-`storage/app/plugins` behavior.
+The legacy `console.authoring_root` setting remains supported as a shorthand
+for `<authoring_root>/definitions` and `<authoring_root>/dist`. Explicit
+`console.plugins.definitions` and `console.plugins.dist` values are preferred
+for new projects. Existing projects without configuration retain the original
+paths.
+
+### Project overrides and compiled configuration
+
+`plugins.json` is the registry managed by plugin lifecycle commands.
+`plugins.overrides.json` is an optional, project-owned customization layer. Its
+`plugins` object is keyed by installed plugin name:
+
+```json
+{
+  "plugins": {
+    "cms": {
+      "status": "active",
+      "meta": {
+        "widgets": {
+          "support": {
+            "active": false
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Compile and validate the effective registry after changing either source:
+
+```bash
+php webrium plugin:config:compile
+php webrium plugin:config:compile --dry-run
+```
+
+JSON objects merge recursively. Numeric arrays are replaced in full, never
+merged by index. Package-owned fields such as `version`, `files`, and `hash`
+cannot be overridden. An unknown plugin name or invalid override fails without
+replacing the last valid compiled file. Registry changes made by install,
+update, or remove invalidate the compiled file so stale output is not consumed.
+The compiled file is derived cache data and should not be committed.
 
 For full documentation on creating and distributing plugins, see the **[Plugin System Wiki](https://github.com/webrium/console/wiki/webrium-plugin-system)**.
 

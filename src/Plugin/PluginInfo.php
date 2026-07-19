@@ -27,6 +27,10 @@ class PluginInfo extends Command
         $io     = new SymfonyStyle($input, $output);
         $source = $input->getArgument('source');
 
+        if (!$this->initializePluginPaths($io)) {
+            return Command::FAILURE;
+        }
+
         // 1. Resolve source
         $zipPath = $this->resolveSource($source, $io);
         if ($zipPath === null) return Command::FAILURE;

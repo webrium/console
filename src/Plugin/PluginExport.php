@@ -36,13 +36,13 @@ class PluginExport extends Command
 
         if ($dryRun) $io->note('Dry-run mode: no zip will be created.');
 
-        $authoringRoot = PluginAuthoringConfig::resolve($input->getOption('authoring-root'), $io);
-        if ($authoringRoot === null) {
+        $paths = PluginPathConfig::resolve($io, $input->getOption('authoring-root'));
+        if ($paths === null) {
             return Command::FAILURE;
         }
 
         // 1. Load definition
-        $defPath = $this->definitionPath($authoringRoot, $name);
+        $defPath = $this->definitionPath($paths['definitions'], $name);
         if (!file_exists($defPath)) {
             $io->error("Definition file not found: $defPath");
             $newCommand = 'php webrium plugin:new ' . $name;
@@ -127,7 +127,7 @@ class PluginExport extends Command
         }
 
         // 5. Check output path
-        $distDir = $authoringRoot . '/dist';
+        $distDir = $paths['dist'];
         $zipName = "{$def['name']}-v{$version}.zip";
         $zipPath = $distDir . '/' . $zipName;
 
@@ -236,8 +236,8 @@ class PluginExport extends Command
         }
     }
 
-    private function definitionPath(string $authoringRoot, string $name): string
+    private function definitionPath(string $definitionsDir, string $name): string
     {
-        return $authoringRoot . '/definitions/' . $name . '.json';
+        return $definitionsDir . '/' . $name . '.json';
     }
 }
