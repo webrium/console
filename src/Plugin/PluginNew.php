@@ -21,7 +21,6 @@ class PluginNew extends Command
         Directory::initDefaultStructure();
         $this
             ->addArgument('name', InputArgument::REQUIRED, 'Plugin name (e.g. admin-panel)')
-            ->addOption('authoring-root', null, InputOption::VALUE_REQUIRED, 'Plugin authoring repository root (relative to the project root)')
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'Overwrite if definition already exists');
     }
 
@@ -36,7 +35,7 @@ class PluginNew extends Command
             return Command::FAILURE;
         }
 
-        $paths = PluginPathConfig::resolve($io, $input->getOption('authoring-root'));
+        $paths = PluginPathConfig::resolve($io);
         if ($paths === null) {
             return Command::FAILURE;
         }
@@ -86,9 +85,6 @@ class PluginNew extends Command
         $io->newLine();
         $io->writeln('Edit the file and add your files to the <fg=cyan>export</> array.');
         $exportCommand = 'php webrium plugin:export ' . $name . ' <version>';
-        if ($input->getOption('authoring-root') !== null) {
-            $exportCommand .= ' --authoring-root=' . $input->getOption('authoring-root');
-        }
         $io->writeln('Then run: <fg=cyan>' . $exportCommand . '</>');
 
         return Command::SUCCESS;
