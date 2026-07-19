@@ -23,6 +23,11 @@ class PluginList extends Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $io       = new SymfonyStyle($input, $output);
+
+        if (!$this->initializePluginPaths($io)) {
+            return Command::FAILURE;
+        }
+
         $registry = $this->readRegistry();
 
         if (empty($registry['installed'])) {

@@ -35,6 +35,10 @@ class PluginInstall extends Command
         $dryRun   = $input->getOption('dry-run');
         $noBackup = $input->getOption('no-backup');
 
+        if (!$this->initializePluginPaths($io)) {
+            return Command::FAILURE;
+        }
+
         if ($dryRun) $io->note('Dry-run mode: no files will be written.');
 
         // 1. Resolve source

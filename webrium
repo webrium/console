@@ -72,6 +72,7 @@ use Webrium\Console\Plugin\PluginList;
 use Webrium\Console\Plugin\PluginInfo;
 use Webrium\Console\Plugin\PluginNew;
 use Webrium\Console\Plugin\PluginExport;
+use Webrium\Console\Plugin\PluginConfigCompile;
 
 use Symfony\Component\Console\Application;
 
@@ -124,6 +125,7 @@ $application->add(new PluginList());
 $application->add(new PluginInfo());
 $application->add(new PluginNew());
 $application->add(new PluginExport());
+$application->add(new PluginConfigCompile());
 
 // ---------------------------------------------------------------------------
 // Run

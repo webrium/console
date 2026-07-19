@@ -36,12 +36,12 @@ class PluginNew extends Command
             return Command::FAILURE;
         }
 
-        $authoringRoot = PluginAuthoringConfig::resolve($input->getOption('authoring-root'), $io);
-        if ($authoringRoot === null) {
+        $paths = PluginPathConfig::resolve($io, $input->getOption('authoring-root'));
+        if ($paths === null) {
             return Command::FAILURE;
         }
 
-        $defDir  = $authoringRoot . '/definitions';
+        $defDir  = $paths['definitions'];
         $defPath = $defDir . '/' . $name . '.json';
 
         if (!is_dir($defDir) && !@mkdir($defDir, 0755, true) && !is_dir($defDir)) {

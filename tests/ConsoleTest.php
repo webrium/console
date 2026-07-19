@@ -24,6 +24,7 @@ use Webrium\Console\Plugin\PluginInstall;
 use Webrium\Console\Plugin\PluginRemove;
 use Webrium\Console\Plugin\PluginUpdate;
 use Webrium\Console\Plugin\PluginExport;
+use Webrium\Console\Plugin\PluginConfigCompile;
 
 /**
  * Unit tests for webrium/console commands
@@ -40,7 +41,8 @@ use Webrium\Console\Plugin\PluginExport;
  * §10 PluginRemove (plugin:remove)
  * §11 PluginUpdate (plugin:update)
  * §12 PluginExport (plugin:export)
- * §13 PluginHelper trait — unit-level
+ * §13 PluginConfigCompile (plugin:config:compile)
+ * §14 PluginHelper trait — unit-level
  */
 class ConsoleTest extends TestCase
 {
@@ -950,7 +952,228 @@ class ConsoleTest extends TestCase
     }
 
     // =========================================================================
-    // §13 PluginHelper trait — unit-level
+    // §13 PluginConfigCompile
+    // =========================================================================
+
+    public function testPluginPathsCanBeConfiguredIndependently(): void
+    {
+        $this->writeConsolePluginPaths([
+            'registry' => 'project/plugins.json',
+            'overrides' => 'project/plugins.overrides.json',
+            'compiled' => 'var/cache/plugins.compiled.json',
+            'definitions' => 'org-plugins/plugin-definitions',
+            'dist' => 'org-plugins/packages',
+            'backups' => 'var/plugin-backups',
+        ]);
+
+        $this->writeJsonFile('project/plugins.json', [
+            'installed' => [[
+                'name' => 'cms',
+                'version' => '1.0.0',
+                'status' => 'active',
+                'files' => [],
+                'meta' => ['theme' => ['name' => 'default', 'dark' => false]],
+            ]],
+        ]);
+        $this->writeJsonFile('project/plugins.overrides.json', [
+            'plugins' => [
+                'cms' => [
+                    'status' => 'disabled',
+                    'meta' => ['theme' => ['dark' => true]],
+                ],
+            ],
+        ]);
+
+        $compile = $this->tester(new PluginConfigCompile());
+        $compile->execute([]);
+
+        $this->assertSame(0, $compile->getStatusCode());
+        $compiledPath = $this->tmpDir . '/var/cache/plugins.compiled.json';
+        $this->assertFileExists($compiledPath);
+        $compiled = json_decode(file_get_contents($compiledPath), true);
+        $this->assertSame('disabled', $compiled['installed'][0]['status']);
+        $this->assertSame('default', $compiled['installed'][0]['meta']['theme']['name']);
+        $this->assertTrue($compiled['installed'][0]['meta']['theme']['dark']);
+
+        $new = $this->tester(new PluginNew());
+        $new->execute(['name' => 'configured-paths']);
+        $this->assertSame(0, $new->getStatusCode());
+        $this->assertFileExists($this->tmpDir . '/org-plugins/plugin-definitions/configured-paths.json');
+
+        file_put_contents($this->tmpDir . '/app/Controllers/ConfiguredPathsController.php', '<?php // configured');
+        $definitionPath = $this->tmpDir . '/org-plugins/plugin-definitions/configured-paths.json';
+        $definition = json_decode(file_get_contents($definitionPath), true);
+        $definition['export'] = [[
+            'file' => 'app/Controllers/ConfiguredPathsController.php',
+            'dest' => 'controllers',
+        ]];
+        file_put_contents($definitionPath, json_encode($definition));
+
+        $export = $this->tester(new PluginExport());
+        $export->execute(['name' => 'configured-paths', 'version' => '1.2.3']);
+        $this->assertSame(0, $export->getStatusCode());
+        $this->assertFileExists($this->tmpDir . '/org-plugins/packages/configured-paths-v1.2.3.zip');
+    }
+
+    public function testPluginConfigCompileReplacesNumericArraysInsteadOfMergingByIndex(): void
+    {
+        $this->writeRegistry([
+            'installed' => [[
+                'name' => 'cms',
+                'version' => '1.0.0',
+                'files' => [],
+                'meta' => [
+                    'routes' => [
+                        ['href' => '/admin', 'active' => true],
+                        ['href' => '/support', 'active' => true],
+                    ],
+                ],
+            ]],
+        ]);
+        $this->writeJsonFile('storage/app/plugins/plugins.overrides.json', [
+            'plugins' => [
+                'cms' => [
+                    'meta' => [
+                        'routes' => [['href' => '/contact/support', 'active' => true]],
+                    ],
+                ],
+            ],
+        ]);
+
+        $tester = $this->tester(new PluginConfigCompile());
+        $tester->execute([]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $compiled = json_decode(
+            file_get_contents($this->tmpDir . '/storage/framework/cache/plugins.compiled.json'),
+            true
+        );
+        $this->assertCount(1, $compiled['installed'][0]['meta']['routes']);
+        $this->assertSame('/contact/support', $compiled['installed'][0]['meta']['routes'][0]['href']);
+    }
+
+    public function testPluginConfigCompileWorksWithoutOptionalOverridesFile(): void
+    {
+        $registry = ['installed' => [['name' => 'cms', 'version' => '1.0.0', 'files' => []]]];
+        $this->writeRegistry($registry);
+
+        $tester = $this->tester(new PluginConfigCompile());
+        $tester->execute([]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $compiled = json_decode(
+            file_get_contents($this->tmpDir . '/storage/framework/cache/plugins.compiled.json'),
+            true
+        );
+        $this->assertSame($registry, $compiled);
+    }
+
+    public function testPluginConfigCompileDryRunDoesNotWriteOutput(): void
+    {
+        $this->writeRegistry(['installed' => []]);
+
+        $tester = $this->tester(new PluginConfigCompile());
+        $tester->execute(['--dry-run' => true]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertFileDoesNotExist($this->tmpDir . '/storage/framework/cache/plugins.compiled.json');
+    }
+
+    public function testPluginConfigCompileRejectsUnknownPluginsAndKeepsExistingOutput(): void
+    {
+        $this->writeRegistry(['installed' => [['name' => 'cms', 'version' => '1.0.0', 'files' => []]]]);
+        $this->writeJsonFile('storage/app/plugins/plugins.overrides.json', [
+            'plugins' => ['missing-plugin' => ['active' => false]],
+        ]);
+        $this->writeJsonFile('storage/framework/cache/plugins.compiled.json', ['sentinel' => true]);
+
+        $tester = $this->tester(new PluginConfigCompile());
+        $tester->execute([]);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('unknown plugin', $tester->getDisplay());
+        $this->assertSame(
+            ['sentinel' => true],
+            json_decode(file_get_contents($this->tmpDir . '/storage/framework/cache/plugins.compiled.json'), true)
+        );
+    }
+
+    public function testPluginConfigCompileRejectsPackageOwnedFields(): void
+    {
+        $this->writeRegistry(['installed' => [['name' => 'cms', 'version' => '1.0.0', 'files' => []]]]);
+        $this->writeJsonFile('storage/app/plugins/plugins.overrides.json', [
+            'plugins' => ['cms' => ['version' => '99.0.0']],
+        ]);
+
+        $tester = $this->tester(new PluginConfigCompile());
+        $tester->execute([]);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('package-owned', $tester->getDisplay());
+    }
+
+    public function testPluginRegistryMutationInvalidatesConfiguredCompiledFile(): void
+    {
+        $this->writeConsolePluginPaths([
+            'registry' => 'project/plugins.json',
+            'compiled' => 'var/cache/custom-plugins.json',
+        ]);
+        $this->writeJsonFile('var/cache/custom-plugins.json', ['stale' => true]);
+        $zip = $this->buildValidPluginZip('invalidate-plugin', '1.0.0');
+
+        $tester = $this->tester(new PluginInstall());
+        $tester->execute(['source' => $zip]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertFileExists($this->tmpDir . '/project/plugins.json');
+        $this->assertFileDoesNotExist($this->tmpDir . '/var/cache/custom-plugins.json');
+    }
+
+    public function testPluginUpdateUsesConfiguredBackupDirectory(): void
+    {
+        $this->writeConsolePluginPaths([
+            'registry' => 'project/plugins.json',
+            'backups' => 'var/plugin-backups',
+        ]);
+        $zipV1 = $this->buildValidPluginZip('backup-path-plugin', '1.0.0', '<?php // v1');
+        $zipV2 = $this->buildValidPluginZip('backup-path-plugin', '2.0.0', '<?php // v2');
+        $this->tester(new PluginInstall())->execute(['source' => $zipV1]);
+
+        $tester = $this->tester(new PluginUpdate());
+        $tester->execute(['source' => $zipV2]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $backupDirs = glob($this->tmpDir . '/var/plugin-backups/backup-path-plugin_v1.0.0_*');
+        $this->assertCount(1, $backupDirs);
+    }
+
+    public function testPluginPathsRejectTraversalInAnyConfiguredPath(): void
+    {
+        $this->writeConsolePluginPaths(['registry' => '../outside/plugins.json']);
+
+        $tester = $this->tester(new PluginList());
+        $tester->execute([]);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('traversal', $tester->getDisplay());
+    }
+
+    public function testPluginPathsRejectRegistryAndCompiledPathCollision(): void
+    {
+        $this->writeConsolePluginPaths([
+            'registry' => 'storage/app/plugins/effective.json',
+            'compiled' => 'storage/app/plugins/effective.json',
+        ]);
+
+        $tester = $this->tester(new PluginList());
+        $tester->execute([]);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('distinct location', $tester->getDisplay());
+    }
+
+    // =========================================================================
+    // §14 PluginHelper trait — unit-level
     // =========================================================================
 
     public function testReadManifestFailsIfPluginJsonMissing(): void
@@ -1270,6 +1493,25 @@ class ConsoleTest extends TestCase
                 ],
             ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
+    }
+
+    private function writeConsolePluginPaths(array $paths): void
+    {
+        file_put_contents(
+            $this->tmpDir . '/.webrium.conf.json',
+            json_encode([
+                'console' => [
+                    'plugins' => $paths,
+                ],
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+        );
+    }
+
+    private function writeJsonFile(string $relativePath, array $data): void
+    {
+        $path = $this->tmpDir . '/' . $relativePath;
+        @mkdir(dirname($path), 0755, true);
+        file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
     /**

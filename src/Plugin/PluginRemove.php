@@ -32,6 +32,10 @@ class PluginRemove extends Command
         $noBackup  = $input->getOption('no-backup');
         $keepFiles = $input->getOption('keep-files');
 
+        if (!$this->initializePluginPaths($io)) {
+            return Command::FAILURE;
+        }
+
         // 1. Load registry
         $registry = $this->readRegistry();
         $plugin   = $this->findInRegistry($registry, $name);

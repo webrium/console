@@ -6,6 +6,15 @@ use Webrium\Directory;
 
 trait PluginHelper
 {
+    /** @var array<string, string>|null */
+    private ?array $pluginPaths = null;
+
+    private function initializePluginPaths(SymfonyStyle $io): bool
+    {
+        $this->pluginPaths = PluginPathConfig::resolve($io);
+        return $this->pluginPaths !== null;
+    }
+
     private function resolveSource(string $source, SymfonyStyle $io): ?string
     {
         if (filter_var($source, FILTER_VALIDATE_URL)) {
@@ -261,10 +270,19 @@ trait PluginHelper
 
     private function saveRegistry(array $registry): void
     {
+        $path = $this->registryPath();
+        @mkdir(dirname($path), 0755, true);
         file_put_contents(
-            $this->registryPath(),
-            json_encode($registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+            $path,
+            json_encode($registry, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL,
+            LOCK_EX
         );
+
+        // A registry mutation makes any previously compiled view stale.
+        $compiledPath = $this->pluginPath('compiled');
+        if (is_file($compiledPath)) {
+            @unlink($compiledPath);
+        }
     }
 
     private function findInRegistry(array $registry, string $name): ?array
@@ -277,14 +295,12 @@ trait PluginHelper
 
     private function registryPath(): string
     {
-        $dir = Directory::path('storage_app') . '/plugins';
-        @mkdir($dir, 0755, true);
-        return $dir . '/plugins.json';
+        return $this->pluginPath('registry');
     }
 
     private function backupFiles(array $files, string $pluginName, string $tag, SymfonyStyle $io): void
     {
-        $dir = Directory::path('storage_app') . '/plugins/backups/' . $pluginName . '_' . $tag . '_' . date('Ymd_His');
+        $dir = $this->pluginPath('backups') . '/' . $pluginName . '_' . $tag . '_' . date('Ymd_His');
         @mkdir($dir, 0755, true);
 
         foreach ($files as $file) {
@@ -306,6 +322,22 @@ trait PluginHelper
         }
 
         $io->writeln("<fg=yellow>⚠ Backup saved to:</> $dir");
+    }
+
+    private function pluginPath(string $key): string
+    {
+        if ($this->pluginPaths === null) {
+            $root = $this->projectRoot();
+            $defaults = [
+                'registry' => 'storage/app/plugins/plugins.json',
+                'compiled' => 'storage/framework/cache/plugins.compiled.json',
+                'backups' => 'storage/app/plugins/backups',
+            ];
+            return $root . DIRECTORY_SEPARATOR
+                . str_replace('/', DIRECTORY_SEPARATOR, $defaults[$key]);
+        }
+
+        return $this->pluginPaths[$key];
     }
 
     private function projectRoot(): string
