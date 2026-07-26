@@ -1311,6 +1311,61 @@ class ConsoleTest extends TestCase
         $this->assertNull($result);
     }
 
+    public function testBuildPlanAcceptsSupportedFontSignatures(): void
+    {
+        $helper = $this->makeHelperInstance();
+        $dir = $this->tmpDir . '/font_plugin';
+        mkdir($dir . '/src/assets/fonts', 0755, true);
+
+        $fixtures = [
+            'font.woff' => 'wOFF' . str_repeat("\x00", 8),
+            'font.woff2' => 'wOF2' . str_repeat("\x00", 8),
+            'font.ttf' => "\x00\x01\x00\x00" . str_repeat("\x00", 8),
+            'font.otf' => 'OTTO' . str_repeat("\x00", 8),
+        ];
+
+        $files = [];
+        foreach ($fixtures as $name => $contents) {
+            file_put_contents($dir . '/src/assets/fonts/' . $name, $contents);
+            $files[] = [
+                'src' => 'assets/fonts/' . $name,
+                'dest' => 'assets',
+                'subpath' => 'fonts',
+            ];
+        }
+
+        $result = $this->callHelperMethod(
+            $helper,
+            'buildPlan',
+            [['files' => $files], $dir, $this->makeNullIo()]
+        );
+
+        $this->assertIsArray($result);
+        $this->assertCount(count($fixtures), $result);
+    }
+
+    public function testBuildPlanRejectsFontWithInvalidSignature(): void
+    {
+        $helper = $this->makeHelperInstance();
+        $dir = $this->tmpDir . '/invalid_font_plugin';
+        mkdir($dir . '/src/assets/fonts', 0755, true);
+        file_put_contents($dir . '/src/assets/fonts/payload.woff2', '<?php echo "unsafe";');
+
+        $manifest = ['files' => [[
+            'src' => 'assets/fonts/payload.woff2',
+            'dest' => 'assets',
+            'subpath' => 'fonts',
+        ]]];
+
+        $result = $this->callHelperMethod(
+            $helper,
+            'buildPlan',
+            [$manifest, $dir, $this->makeNullIo()]
+        );
+
+        $this->assertNull($result);
+    }
+
     public function testBuildPlanStillRejectsZipFiles(): void
     {
         $helper = $this->makeHelperInstance();

@@ -128,8 +128,10 @@ trait PluginHelper
         $allowed     = [
             'php', 'html', 'htm', 'js', 'css', 'json', 'md', 'txt', 'svg', 'xml', 'vue',
             'png', 'jpg', 'jpeg', 'webp', 'ico',
+            'woff', 'woff2', 'ttf', 'otf',
         ];
         $rasterImages = ['png', 'jpg', 'jpeg', 'webp', 'ico'];
+        $fontFiles    = ['woff', 'woff2', 'ttf', 'otf'];
         $projectRoot = realpath(Directory::path('app') . '/../') ?: getcwd();
         $srcBase     = realpath($tempDir . '/src');
         $plan        = [];
@@ -157,7 +159,8 @@ trait PluginHelper
                 return null;
             }
 
-            if (in_array($ext, $rasterImages, true) && !$this->hasValidRasterSignature($srcPath, $ext)) {
+            if ((in_array($ext, $rasterImages, true) || in_array($ext, $fontFiles, true))
+                && !$this->hasValidBinaryAssetSignature($srcPath, $ext)) {
                 $io->error("File contents do not match the '$ext' extension in '{$entry['src']}'.");
                 return null;
             }
@@ -194,10 +197,11 @@ trait PluginHelper
     }
 
     /**
-     * Verify common raster formats by their binary signatures so an executable
-     * or arbitrary file cannot be accepted merely by changing its extension.
+     * Verify common raster and font formats by their binary signatures so an
+     * executable or arbitrary file cannot be accepted merely by changing its
+     * extension.
      */
-    private function hasValidRasterSignature(string $path, string $extension): bool
+    private function hasValidBinaryAssetSignature(string $path, string $extension): bool
     {
         $handle = @fopen($path, 'rb');
         if ($handle === false) {
@@ -218,6 +222,11 @@ trait PluginHelper
                 && substr($header, 0, 4) === 'RIFF'
                 && substr($header, 8, 4) === 'WEBP',
             'ico' => str_starts_with($header, "\x00\x00\x01\x00"),
+            'woff' => str_starts_with($header, 'wOFF'),
+            'woff2' => str_starts_with($header, 'wOF2'),
+            'ttf' => str_starts_with($header, "\x00\x01\x00\x00")
+                || str_starts_with($header, 'true'),
+            'otf' => str_starts_with($header, 'OTTO'),
             default => false,
         };
     }
