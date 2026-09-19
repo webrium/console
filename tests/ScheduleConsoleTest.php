@@ -12,12 +12,16 @@ use Webrium\Schedule;
 
 use Webrium\Console\GenerateSchedule;
 use Webrium\Console\ScheduleRun;
+use Webrium\Console\ScheduleList;
+use Webrium\Console\ScheduleTestCommand;
 
 /**
  * Unit tests for the task-scheduler console commands.
  *
  * §1  GenerateSchedule (make:schedule)
  * §2  ScheduleRun (schedule:run)
+ * §3  ScheduleList (schedule:list)
+ * §4  ScheduleTestCommand (schedule:test)
  */
 class ScheduleConsoleTest extends TestCase
 {
@@ -199,5 +203,133 @@ class ScheduleConsoleTest extends TestCase
         $this->assertSame(1, $tester->getStatusCode());
         $this->assertStringContainsString('Failed to load', $tester->getDisplay());
         $this->assertStringContainsString('cannot load', $tester->getDisplay());
+    }
+
+    // =========================================================================
+    // §3  ScheduleList
+    // =========================================================================
+
+    public function testScheduleListReportsNoTasksWhenDirectoryIsEmpty(): void
+    {
+        $tester = $this->tester(new ScheduleList());
+        $tester->execute([]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('No scheduled tasks registered', $tester->getDisplay());
+    }
+
+    public function testScheduleListShowsNameAndExpressionForEachTask(): void
+    {
+        file_put_contents(
+            $this->tmpDir . '/app/Schedules/Reports.php',
+            '<?php \\Webrium\\Schedule::call(fn () => null)->name("reports.daily")->dailyAt("01:00");'
+        );
+
+        $tester = $this->tester(new ScheduleList());
+        $tester->execute([]);
+
+        $display = $tester->getDisplay();
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('reports.daily', $display);
+        $this->assertStringContainsString('0 1 * * *', $display);
+    }
+
+    public function testScheduleListReportsBrokenFileLoadErrorAndExitsNonZero(): void
+    {
+        file_put_contents(
+            $this->tmpDir . '/app/Schedules/Broken.php',
+            '<?php throw new \\RuntimeException("cannot load for listing");'
+        );
+
+        $tester = $this->tester(new ScheduleList());
+        $tester->execute([]);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('Failed to load', $tester->getDisplay());
+    }
+
+    // =========================================================================
+    // §4  ScheduleTestCommand
+    // =========================================================================
+
+    public function testScheduleTestReportsNoTasksWhenDirectoryIsEmpty(): void
+    {
+        $tester = $this->tester(new ScheduleTestCommand());
+        $tester->execute([]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('No scheduled tasks registered', $tester->getDisplay());
+    }
+
+    public function testScheduleTestRunsNamedTaskImmediatelyIgnoringItsSchedule(): void
+    {
+        // Scheduled for 03:00 daily — schedule:test must run it right now anyway.
+        file_put_contents(
+            $this->tmpDir . '/app/Schedules/Reports.php',
+            '<?php \\Webrium\\Schedule::call(function () {'
+                . 'file_put_contents($GLOBALS["__marker"], "ran");'
+                . '})->name("reports.daily")->dailyAt("03:00");'
+        );
+        $marker = $this->tmpDir . '/marker.txt';
+        $GLOBALS['__marker'] = $marker;
+
+        $tester = $this->tester(new ScheduleTestCommand());
+        $tester->execute(['name' => 'reports.daily']);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('reports.daily', $tester->getDisplay());
+        $this->assertFileExists($marker);
+
+        unset($GLOBALS['__marker']);
+    }
+
+    public function testScheduleTestFailsForUnknownTaskName(): void
+    {
+        file_put_contents(
+            $this->tmpDir . '/app/Schedules/Reports.php',
+            '<?php \\Webrium\\Schedule::call(fn () => null)->name("reports.daily")->daily();'
+        );
+
+        $tester = $this->tester(new ScheduleTestCommand());
+        $tester->execute(['name' => 'does.not.exist']);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('No scheduled task named', $tester->getDisplay());
+    }
+
+    public function testScheduleTestExitsNonZeroWhenTaskThrows(): void
+    {
+        file_put_contents(
+            $this->tmpDir . '/app/Schedules/Bad.php',
+            '<?php \\Webrium\\Schedule::call(function () { throw new \\RuntimeException("boom"); })'
+                . '->name("bad-task")->daily();'
+        );
+
+        $tester = $this->tester(new ScheduleTestCommand());
+        $tester->execute(['name' => 'bad-task']);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString('boom', $tester->getDisplay());
+    }
+
+    public function testScheduleTestPromptsWhenNameIsOmitted(): void
+    {
+        file_put_contents(
+            $this->tmpDir . '/app/Schedules/Reports.php',
+            '<?php \\Webrium\\Schedule::call(function () {'
+                . 'file_put_contents($GLOBALS["__marker"], "ran");'
+                . '})->name("reports.daily")->daily();'
+        );
+        $marker = $this->tmpDir . '/marker.txt';
+        $GLOBALS['__marker'] = $marker;
+
+        $tester = $this->tester(new ScheduleTestCommand());
+        $tester->setInputs(['reports.daily']);
+        $tester->execute([]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertFileExists($marker);
+
+        unset($GLOBALS['__marker']);
     }
 }

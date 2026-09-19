@@ -62,6 +62,8 @@ use Webrium\Console\GenerateSeeder;
 use Webrium\Console\SeedAction;
 use Webrium\Console\GenerateSchedule;
 use Webrium\Console\ScheduleRun;
+use Webrium\Console\ScheduleList;
+use Webrium\Console\ScheduleTestCommand;
 
 // ---------------------------------------------------------------------------
 // Plugin Management Commands
@@ -120,6 +122,8 @@ $application->add(new GenerateSeeder());
 $application->add(new SeedAction());
 $application->add(new GenerateSchedule());
 $application->add(new ScheduleRun());
+$application->add(new ScheduleList());
+$application->add(new ScheduleTestCommand());
 
 // Plugin lifecycle management commands
 $application->add(new PluginInstall());
