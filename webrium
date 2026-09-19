@@ -60,6 +60,8 @@ use Webrium\Console\GenerateMigration;
 use Webrium\Console\MigrateAction;
 use Webrium\Console\GenerateSeeder;
 use Webrium\Console\SeedAction;
+use Webrium\Console\GenerateSchedule;
+use Webrium\Console\ScheduleRun;
 
 // ---------------------------------------------------------------------------
 // Plugin Management Commands
@@ -116,6 +118,8 @@ $application->add(new GenerateMigration());
 $application->add(new MigrateAction());
 $application->add(new GenerateSeeder());
 $application->add(new SeedAction());
+$application->add(new GenerateSchedule());
+$application->add(new ScheduleRun());
 
 // Plugin lifecycle management commands
 $application->add(new PluginInstall());
