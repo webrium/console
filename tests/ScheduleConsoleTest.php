@@ -14,6 +14,7 @@ use Webrium\Console\GenerateSchedule;
 use Webrium\Console\ScheduleRun;
 use Webrium\Console\ScheduleList;
 use Webrium\Console\ScheduleTestCommand;
+use Webrium\Console\ScheduleWork;
 
 /**
  * Unit tests for the task-scheduler console commands.
@@ -22,6 +23,7 @@ use Webrium\Console\ScheduleTestCommand;
  * §2  ScheduleRun (schedule:run)
  * §3  ScheduleList (schedule:list)
  * §4  ScheduleTestCommand (schedule:test)
+ * §5  ScheduleWork (schedule:work)
  */
 class ScheduleConsoleTest extends TestCase
 {
@@ -331,5 +333,97 @@ class ScheduleConsoleTest extends TestCase
         $this->assertFileExists($marker);
 
         unset($GLOBALS['__marker']);
+    }
+
+    // =========================================================================
+    // §5  ScheduleWork
+    // =========================================================================
+
+    public function testWorkPrintsStartedAndStoppedMessages(): void
+    {
+        $command = new ScheduleWorkTestDouble();
+        $command->limitTicksForTesting(1);
+
+        $tester = $this->tester($command);
+        $tester->execute([]);
+
+        $display = $tester->getDisplay();
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('Schedule worker started', $display);
+        $this->assertStringContainsString('Schedule worker stopped', $display);
+    }
+
+    /**
+     * Regression guard: tick() must reset the registry before reloading, or
+     * a long-running worker re-registers every task file on every tick
+     * (loadFromDirectory() always re-requires each file) — the same task
+     * would then run once per tick, PLUS N accumulated duplicate copies of
+     * itself by the Nth tick, instead of exactly once per tick.
+     */
+    public function testWorkDoesNotAccumulateDuplicateRunsAcrossTicks(): void
+    {
+        $counter = $this->tmpDir . '/run-count.log';
+        file_put_contents(
+            $this->tmpDir . '/app/Schedules/Counter.php',
+            '<?php \\Webrium\\Schedule::call(function () {'
+                . 'file_put_contents($GLOBALS["__counter"], "x", FILE_APPEND);'
+                . '})->name("counter")->everyMinute();'
+        );
+        $GLOBALS['__counter'] = $counter;
+
+        $command = new ScheduleWorkTestDouble();
+        $command->limitTicksForTesting(3);
+
+        $tester = $this->tester($command);
+        $tester->execute([]);
+
+        $this->assertSame('xxx', file_get_contents($counter), 'exactly one run per tick, not an accumulating duplicate per tick');
+
+        unset($GLOBALS['__counter']);
+    }
+
+    public function testWorkReportsLoadErrorsOnEachTick(): void
+    {
+        file_put_contents(
+            $this->tmpDir . '/app/Schedules/Broken.php',
+            '<?php throw new \\RuntimeException("cannot load in worker");'
+        );
+
+        $command = new ScheduleWorkTestDouble();
+        $command->limitTicksForTesting(1);
+
+        $tester = $this->tester($command);
+        $tester->execute([]);
+
+        $this->assertStringContainsString('Failed to load', $tester->getDisplay());
+        $this->assertStringContainsString('cannot load in worker', $tester->getDisplay());
+    }
+
+    public function testWorkDoesNotRunTasksThatAreNotDue(): void
+    {
+        file_put_contents(
+            $this->tmpDir . '/app/Schedules/NotDue.php',
+            '<?php \\Webrium\\Schedule::call(fn () => null)->name("not-due-task")->dailyAt("03:00");'
+        );
+
+        $command = new ScheduleWorkTestDouble();
+        $command->limitTicksForTesting(1);
+
+        $tester = $this->tester($command);
+        $tester->execute([]);
+
+        $this->assertStringNotContainsString('not-due-task', $tester->getDisplay());
+    }
+}
+
+/**
+ * Test double for ScheduleWork: skips the real (up to 59-second) sleep so
+ * the loop can be exercised in a fast, deterministic unit test.
+ */
+class ScheduleWorkTestDouble extends ScheduleWork
+{
+    protected function sleepUntilNextMinute(): void
+    {
+        // No real sleep in tests.
     }
 }

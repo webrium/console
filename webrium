@@ -64,6 +64,7 @@ use Webrium\Console\GenerateSchedule;
 use Webrium\Console\ScheduleRun;
 use Webrium\Console\ScheduleList;
 use Webrium\Console\ScheduleTestCommand;
+use Webrium\Console\ScheduleWork;
 
 // ---------------------------------------------------------------------------
 // Plugin Management Commands
@@ -124,6 +125,7 @@ $application->add(new GenerateSchedule());
 $application->add(new ScheduleRun());
 $application->add(new ScheduleList());
 $application->add(new ScheduleTestCommand());
+$application->add(new ScheduleWork());
 
 // Plugin lifecycle management commands
 $application->add(new PluginInstall());
