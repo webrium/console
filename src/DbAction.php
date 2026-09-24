@@ -7,7 +7,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Foxdb\DB;
 use Webrium\Directory;
@@ -204,9 +203,7 @@ class DbAction extends Command
         }
 
         if (!$force) {
-            $helper = $this->getHelper('question');
-            $question = new ConfirmationQuestion("<question>Are you sure you want to delete the '<error>$name</error>' database? (yes/no) [no]: </question>", false);
-            if (!$helper->ask($input, $output, $question)) {
+            if (!$io->confirm("Are you sure you want to delete the '<error>$name</error>' database?", false)) {
                 $io->note("Database deletion cancelled.");
                 return Command::SUCCESS;
             }
