@@ -7,7 +7,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Foxdb\Migrations\Migrator;
 use Foxdb\Migrations\MigrationResult;
@@ -223,10 +222,9 @@ class MigrateAction extends Command
             return true;
         }
 
-        $helper = $this->getHelper('question');
-        $question = new ConfirmationQuestion("<question>$message (yes/no) [no]: </question>", false);
+        $io = new SymfonyStyle($input, $output);
 
-        return (bool) $helper->ask($input, $output, $question);
+        return $io->confirm($message, false);
     }
 
     /**

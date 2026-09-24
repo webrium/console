@@ -7,7 +7,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Foxdb\Seeders\SeederRunner;
 use Foxdb\Seeders\SeederResult;
@@ -157,12 +156,8 @@ class SeedAction extends Command
             return true;
         }
 
-        $helper = $this->getHelper('question');
-        $question = new ConfirmationQuestion(
-            "<question>Application is in production. Run seeders anyway? (yes/no) [no]: </question>",
-            false
-        );
+        $io = new SymfonyStyle($input, $output);
 
-        return (bool) $helper->ask($input, $output, $question);
+        return $io->confirm('Application is in production. Run seeders anyway?', false);
     }
 }

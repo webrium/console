@@ -1785,4 +1785,41 @@ class ConsoleTest extends TestCase
         $this->assertSame(1, $tester->getStatusCode());
         $this->assertStringContainsString('not found', $tester->getDisplay());
     }
+
+    public function testSeedCancelledInProductionWhenUserSaysNo(): void
+    {
+        $this->bootSeederDb();
+        $this->writeSeederFile('SeedProd_Cancel', "        DB::table('seed_test_users')->insert(['name' => 'prod_user']);");
+
+        putenv('APP_ENV=production');
+        try {
+            $tester = $this->tester(new SeedAction());
+            $tester->setInputs(['no']);
+            $tester->execute([]);
+
+            $this->assertSame(0, $tester->getStatusCode());
+            $this->assertStringContainsString('cancelled', $tester->getDisplay());
+            $this->assertSame(0, (int) \Foxdb\DB::table('seed_test_users')->count());
+        } finally {
+            putenv('APP_ENV');
+        }
+    }
+
+    public function testSeedRunsInProductionWhenUserSaysYes(): void
+    {
+        $this->bootSeederDb();
+        $this->writeSeederFile('SeedProd_Confirm', "        DB::table('seed_test_users')->insert(['name' => 'prod_user']);");
+
+        putenv('APP_ENV=production');
+        try {
+            $tester = $this->tester(new SeedAction());
+            $tester->setInputs(['yes']);
+            $tester->execute([]);
+
+            $this->assertSame(0, $tester->getStatusCode(), $tester->getDisplay());
+            $this->assertSame(1, (int) \Foxdb\DB::table('seed_test_users')->count());
+        } finally {
+            putenv('APP_ENV');
+        }
+    }
 }
