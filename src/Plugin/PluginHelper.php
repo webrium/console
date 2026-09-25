@@ -186,10 +186,15 @@ trait PluginHelper
             }
 
             $plan[] = [
-                'src'       => $srcPath,
-                'dest'      => $destPath,
-                'dest_dir'  => $destDir,
-                'overwrite' => $entry['overwrite'] ?? false,
+                'src'          => $srcPath,
+                'dest'         => $destPath,
+                'dest_dir'     => $destDir,
+                'overwrite'    => $entry['overwrite'] ?? false,
+                // The manifest's own "src" string (e.g. "docs/SETUP.md"), kept
+                // alongside the resolved absolute paths above so
+                // post_install_message_file can find which installed file it
+                // refers to without re-deriving it from $srcPath.
+                'manifest_src' => $entry['src'],
             ];
         }
 

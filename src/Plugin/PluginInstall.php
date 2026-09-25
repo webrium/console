@@ -175,6 +175,45 @@ class PluginInstall extends Command
         $this->cleanupTemp($tempDir, $zipPath, $source);
         $io->success("Plugin '{$manifest['name']}' v{$manifest['version']} installed successfully.");
 
+        $this->showPostInstallMessage($manifest, $plan, $io);
+
         return Command::SUCCESS;
+    }
+
+    /**
+     * Print a plugin-authored message after a successful install, if the
+     * manifest defines one. post_install_message_file (a "src" value that
+     * must match one of the plugin's own installed files) takes priority —
+     * its installed content is read fresh off disk — falling back to the
+     * literal post_install_message string. Neither is required; nothing is
+     * printed if both are absent.
+     */
+    private function showPostInstallMessage(array $manifest, array $plan, SymfonyStyle $io): void
+    {
+        $message = null;
+
+        if (!empty($manifest['post_install_message_file'])) {
+            foreach ($plan as $entry) {
+                if ($entry['manifest_src'] === $manifest['post_install_message_file']) {
+                    $content = @file_get_contents($entry['dest']);
+                    if ($content !== false) {
+                        $message = $content;
+                    }
+                    break;
+                }
+            }
+        }
+
+        if ($message === null && !empty($manifest['post_install_message'])) {
+            $message = $manifest['post_install_message'];
+        }
+
+        if ($message === null) {
+            return;
+        }
+
+        $io->newLine();
+        $io->writeln('<fg=yellow>Next steps:</>');
+        $io->writeln($message);
     }
 }

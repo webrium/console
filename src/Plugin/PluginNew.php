@@ -73,6 +73,12 @@ class PluginNew extends Command
                 'after_install'  => [],
             ],
             'meta' => [],
+            // Shown after a successful install. post_install_message_file
+            // must match one of the "file" values above; its installed
+            // content is shown instead of the literal message when both are
+            // set. Both are optional.
+            'post_install_message'      => null,
+            'post_install_message_file' => null,
         ];
 
         if (file_put_contents($defPath, json_encode($template, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) === false) {
