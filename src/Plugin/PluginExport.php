@@ -204,16 +204,23 @@ class PluginExport extends Command
             'overwrite' => $e['overwrite'] ?? false,
         ], $def['export']);
 
+        $messageFile = $def['post_install_message_file'] ?? null;
+        if ($messageFile !== null) {
+            $messageFile = ltrim(str_replace(['/', '\\'], '/', $messageFile), '/');
+        }
+
         return [
-            'name'        => $def['name'],
-            'version'     => $def['version'],
-            'description' => $def['description'] ?? '',
-            'author'      => $def['author']      ?? '',
-            'require'     => $def['require']      ?? [],
-            'files'       => $files,
-            'sql'         => $def['sql']          ?? [],
-            'hooks'       => $def['hooks']        ?? ['before_install' => [], 'after_install' => []],
-            'meta'        => $def['meta']         ?? [],
+            'name'                      => $def['name'],
+            'version'                   => $def['version'],
+            'description'               => $def['description'] ?? '',
+            'author'                    => $def['author']      ?? '',
+            'require'                   => $def['require']      ?? [],
+            'files'                     => $files,
+            'sql'                       => $def['sql']          ?? [],
+            'hooks'                     => $def['hooks']        ?? ['before_install' => [], 'after_install' => []],
+            'meta'                      => $def['meta']         ?? [],
+            'post_install_message'      => $def['post_install_message'] ?? null,
+            'post_install_message_file' => $messageFile,
         ];
     }
 
