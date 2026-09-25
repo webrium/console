@@ -315,6 +315,18 @@ class ConsoleTest extends TestCase
     // §6  LogAction
     // =========================================================================
 
+    /**
+     * Builds one log entry in the actual format Webrium\Debug / Webrium\Logger
+     * write (a line of 80 "=" around a "[date time] [LEVEL] message" line) —
+     * not the "##"-delimited fixture the old tests used, which no real log
+     * writer has ever produced.
+     */
+    private function logEntry(string $level, string $message): string
+    {
+        $sep = str_repeat('=', 80);
+        return "\n{$sep}\n[2026_06_15 10:00:00] [" . strtoupper($level) . "] {$message}\n{$sep}\n";
+    }
+
     public function testLogListShowsAvailableLogs(): void
     {
         file_put_contents($this->tmpDir . '/storage/logs/error_2026_06_01.txt', 'some error');
@@ -347,13 +359,39 @@ class ConsoleTest extends TestCase
 
     public function testLogLatestShowsMostRecentFile(): void
     {
-        file_put_contents($this->tmpDir . '/storage/logs/error_2026_06_15.txt', '##Error A#line1##Error B#line2');
+        file_put_contents($this->tmpDir . '/storage/logs/error_2026_06_15.txt', $this->logEntry('error', 'boom'));
 
         $tester = $this->tester(new LogAction());
         $tester->execute(['action' => 'latest']);
 
         $this->assertSame(0, $tester->getStatusCode());
-        $this->assertStringContainsString('Error', $tester->getDisplay());
+        $this->assertStringContainsString('boom', $tester->getDisplay());
+    }
+
+    /**
+     * Webrium\Logger writes one file per level per day (error_*, info_*,
+     * warning_*, ...), so same-day filenames now differ only by their level
+     * prefix. "warning_..." sorts alphabetically after "error_..." (w > e),
+     * but must NOT win "latest" just because of that — only actual
+     * modification time may decide.
+     */
+    public function testLogLatestSortsByModificationTimeNotFilename(): void
+    {
+        $dir = $this->tmpDir . '/storage/logs';
+
+        file_put_contents($dir . '/warning_2026_06_15.txt', $this->logEntry('warning', 'stale warning'));
+        touch($dir . '/warning_2026_06_15.txt', time() - 100);
+
+        file_put_contents($dir . '/error_2026_06_15.txt', $this->logEntry('error', 'fresh error'));
+        touch($dir . '/error_2026_06_15.txt', time());
+
+        $tester = $this->tester(new LogAction());
+        $tester->execute(['action' => 'latest']);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+        $this->assertStringContainsString('fresh error', $display);
+        $this->assertStringNotContainsString('stale warning', $display);
     }
 
     public function testLogLatestNoFilesPrintsMessage(): void
@@ -367,13 +405,35 @@ class ConsoleTest extends TestCase
 
     public function testLogFileShowsSpecificFile(): void
     {
-        file_put_contents($this->tmpDir . '/storage/logs/specific.txt', '##Error X#details');
+        file_put_contents($this->tmpDir . '/storage/logs/specific.txt', $this->logEntry('error', 'Error X details'));
 
         $tester = $this->tester(new LogAction());
         $tester->execute(['action' => 'file', 'name' => 'specific.txt']);
 
         $this->assertSame(0, $tester->getStatusCode());
-        $this->assertStringContainsString('Error X', $tester->getDisplay());
+        $this->assertStringContainsString('Error X details', $tester->getDisplay());
+    }
+
+    /**
+     * Regression test for the entry separator: a file with two appended
+     * entries (exactly how Logger writes them, via FILE_APPEND) must show
+     * both messages, and the raw "====...====" marker must not leak into
+     * the display — proving the split actually happened rather than the
+     * whole file being shown as one unparsed block.
+     */
+    public function testLogFileSplitsMultipleEntriesOnTheRealSeparator(): void
+    {
+        $content = $this->logEntry('error', 'first failure') . $this->logEntry('error', 'second failure');
+        file_put_contents($this->tmpDir . '/storage/logs/specific.txt', $content);
+
+        $tester = $this->tester(new LogAction());
+        $tester->execute(['action' => 'file', 'name' => 'specific.txt']);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $display = $tester->getDisplay();
+        $this->assertStringContainsString('first failure', $display);
+        $this->assertStringContainsString('second failure', $display);
+        $this->assertStringNotContainsString(str_repeat('=', 80), $display);
     }
 
     public function testLogFileReturnsInvalidForMissingFile(): void
