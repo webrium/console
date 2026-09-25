@@ -689,6 +689,41 @@ class ConsoleTest extends TestCase
         unlink($zipPath);
     }
 
+    public function testPluginInstallAcceptsJsxFiles(): void
+    {
+        $zipPath = $this->buildPluginZipWithFiles('jsx-plugin', '1.0.0', [[
+            'src' => 'resources/js/demo.jsx',
+            'dest' => 'resources',
+            'subpath' => 'js',
+            'content' => 'export default function Demo() { return null; }',
+        ]]);
+
+        $tester = $this->tester(new PluginInstall());
+        $tester->execute(['source' => $zipPath]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertFileExists($this->tmpDir . '/resources/js/demo.jsx');
+
+        unlink($zipPath);
+    }
+
+    public function testPluginInstallRejectsDisallowedExtension(): void
+    {
+        $zipPath = $this->buildPluginZipWithFiles('exe-plugin', '1.0.0', [[
+            'src' => 'app/Controllers/evil.exe',
+            'dest' => 'controllers',
+            'content' => 'not a real binary',
+        ]]);
+
+        $tester = $this->tester(new PluginInstall());
+        $tester->execute(['source' => $zipPath]);
+
+        $this->assertSame(1, $tester->getStatusCode());
+        $this->assertStringContainsString("Disallowed extension 'exe'", $tester->getDisplay());
+
+        unlink($zipPath);
+    }
+
     public function testPluginInstallShowsLiteralPostInstallMessage(): void
     {
         $zipPath = $this->buildValidPluginZip('msg-plugin', '1.0.0', '<?php // demo', [

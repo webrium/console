@@ -126,7 +126,7 @@ trait PluginHelper
     private function buildPlan(array $manifest, string $tempDir, SymfonyStyle $io): ?array
     {
         $allowed     = [
-            'php', 'html', 'htm', 'js', 'css', 'json', 'md', 'txt', 'svg', 'xml', 'vue',
+            'php', 'html', 'htm', 'js', 'jsx', 'css', 'json', 'md', 'txt', 'svg', 'xml', 'vue',
             'png', 'jpg', 'jpeg', 'webp', 'ico',
             'woff', 'woff2', 'ttf', 'otf',
         ];
