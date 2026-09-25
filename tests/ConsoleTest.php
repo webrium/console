@@ -471,6 +471,10 @@ class ConsoleTest extends TestCase
         $this->assertArrayHasKey('version', $data);
         $this->assertArrayHasKey('export', $data);
         $this->assertArrayHasKey('hooks', $data);
+        $this->assertArrayHasKey('post_install_message', $data);
+        $this->assertArrayHasKey('post_install_message_file', $data);
+        $this->assertNull($data['post_install_message']);
+        $this->assertNull($data['post_install_message_file']);
     }
 
     public function testPluginNewFailsOnInvalidName(): void
@@ -681,6 +685,105 @@ class ConsoleTest extends TestCase
 
         $this->assertSame(0, $tester->getStatusCode());
         $this->assertFileDoesNotExist($this->tmpDir . '/app/Controllers/DemoController.php');
+
+        unlink($zipPath);
+    }
+
+    public function testPluginInstallShowsLiteralPostInstallMessage(): void
+    {
+        $zipPath = $this->buildValidPluginZip('msg-plugin', '1.0.0', '<?php // demo', [
+            'post_install_message' => 'Run npm install to finish setup.',
+        ]);
+
+        $tester = $this->tester(new PluginInstall());
+        $tester->execute(['source' => $zipPath]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('Next steps:', $tester->getDisplay());
+        $this->assertStringContainsString('Run npm install to finish setup.', $tester->getDisplay());
+
+        unlink($zipPath);
+    }
+
+    /**
+     * post_install_message_file must show the file's actual *installed*
+     * content (read back off disk after copying), not just its path.
+     */
+    public function testPluginInstallShowsPostInstallMessageFileContent(): void
+    {
+        $zipPath = $this->buildPluginZipWithFiles('msg-file-plugin', '1.0.0', [
+            [
+                'src' => 'app/Controllers/DemoController.php',
+                'dest' => 'controllers',
+                'content' => '<?php // demo',
+            ],
+            [
+                'src' => 'SETUP.md',
+                'dest' => 'root',
+                'content' => "# Finish setup\n\n1. Run npm install\n2. Add the route",
+            ],
+        ], [
+            'post_install_message_file' => 'SETUP.md',
+        ]);
+
+        $tester = $this->tester(new PluginInstall());
+        $tester->execute(['source' => $zipPath]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('Next steps:', $tester->getDisplay());
+        $this->assertStringContainsString('Finish setup', $tester->getDisplay());
+        $this->assertStringContainsString('Add the route', $tester->getDisplay());
+
+        unlink($zipPath);
+    }
+
+    public function testPluginInstallMessageFileTakesPriorityOverLiteralMessage(): void
+    {
+        $zipPath = $this->buildPluginZipWithFiles('msg-priority-plugin', '1.0.0', [
+            [
+                'src' => 'SETUP.md',
+                'dest' => 'root',
+                'content' => 'content from the file',
+            ],
+        ], [
+            'post_install_message'      => 'this literal message should not be shown',
+            'post_install_message_file' => 'SETUP.md',
+        ]);
+
+        $tester = $this->tester(new PluginInstall());
+        $tester->execute(['source' => $zipPath]);
+
+        $display = $tester->getDisplay();
+        $this->assertStringContainsString('content from the file', $display);
+        $this->assertStringNotContainsString('this literal message should not be shown', $display);
+
+        unlink($zipPath);
+    }
+
+    public function testPluginInstallShowsNoNextStepsWhenNeitherMessageIsSet(): void
+    {
+        $zipPath = $this->buildValidPluginZip('no-msg-plugin', '1.0.0');
+
+        $tester = $this->tester(new PluginInstall());
+        $tester->execute(['source' => $zipPath]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringNotContainsString('Next steps:', $tester->getDisplay());
+
+        unlink($zipPath);
+    }
+
+    public function testPluginInstallIgnoresPostInstallMessageFileWithNoMatchingEntry(): void
+    {
+        $zipPath = $this->buildValidPluginZip('msg-unmatched-plugin', '1.0.0', '<?php // demo', [
+            'post_install_message_file' => 'does/not/exist/in/files.md',
+        ]);
+
+        $tester = $this->tester(new PluginInstall());
+        $tester->execute(['source' => $zipPath]);
+
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringNotContainsString('Next steps:', $tester->getDisplay());
 
         unlink($zipPath);
     }
@@ -947,6 +1050,33 @@ class ConsoleTest extends TestCase
         $zip = new \ZipArchive();
         $this->assertTrue($zip->open($zipPath) === true);
         $zip->close();
+    }
+
+    public function testPluginExportCarriesPostInstallMessageFieldsIntoManifest(): void
+    {
+        $this->createExportDefinition('exp-msg-plugin', 'MsgController');
+
+        $defPath = $this->tmpDir . '/storage/app/plugins/definitions/exp-msg-plugin.json';
+        $def = json_decode(file_get_contents($defPath), true);
+        $def['post_install_message']      = 'a literal message';
+        $def['post_install_message_file'] = '/app/Controllers/MsgController.php'; // leading slash, on purpose
+        file_put_contents($defPath, json_encode($def));
+
+        $tester = $this->tester(new PluginExport());
+        $tester->execute(['name' => 'exp-msg-plugin', 'version' => '1.0.0']);
+
+        $this->assertSame(0, $tester->getStatusCode());
+
+        $zipPath = $this->tmpDir . '/storage/app/plugins/dist/exp-msg-plugin-v1.0.0.zip';
+        $zip = new \ZipArchive();
+        $zip->open($zipPath);
+        $manifest = json_decode($zip->getFromName('plugin.json'), true);
+        $zip->close();
+
+        $this->assertSame('a literal message', $manifest['post_install_message']);
+        // Normalized the same way "files[].src" is: leading slash stripped,
+        // backslashes converted — so it can match a files[] entry exactly.
+        $this->assertSame('app/Controllers/MsgController.php', $manifest['post_install_message_file']);
     }
 
     public function testPluginExportUsesConfiguredPathsAndUpdatesDefinition(): void
