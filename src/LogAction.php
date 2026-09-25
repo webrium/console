@@ -74,9 +74,15 @@ class LogAction extends Command
     }
 
     public function showLatestLog($input, $output){
-        $files = array_diff(scandir(Directory::path('logs'), SCANDIR_SORT_DESCENDING), ['.', '..', '.gitignore']);
+        $dir = Directory::path('logs');
+        $files = array_diff(scandir($dir), ['.', '..', '.gitignore']);
 
         if(count($files)>=1){
+            // Webrium\Logger writes one file per level per day (error_*, info_*,
+            // warning_*, ...), so filenames for the same day differ only by
+            // their level prefix — sorting by name no longer tracks recency.
+            // Sort by actual modification time instead.
+            usort($files, fn($a, $b) => filemtime("$dir/$b") <=> filemtime("$dir/$a"));
             $this->showLog($files[0], $input, $output);
         }
         else{
@@ -91,18 +97,26 @@ class LogAction extends Command
     }
 
 
+    // Webrium\Debug / Webrium\Logger separate entries with a line of 80 "="
+    // characters, not "##" — matching that delimiter here is what makes
+    // each written entry actually split into its own displayed block.
+    private const LOG_ENTRY_SEPARATOR = '================================================================================';
+
     private function showLog($file_path, $input, $output){
         $path = Directory::path('logs').'/'.$file_path;
         if(File::exists($path)){
             $text = File::getContent($path);
-            $array = explode('##', $text);
-    
+            $array = explode(self::LOG_ENTRY_SEPARATOR, $text);
+
             foreach($array as $log){
-                $log = str_replace("#", "\n  #", $log);
+                $log = trim($log);
+                if($log === ''){
+                    continue;
+                }
                 $output->writeln("<error> ## </error>$log");
                 $output->writeln('');
             }
-    
+
             return Command::SUCCESS;
         }
         else{
