@@ -127,10 +127,10 @@ trait PluginHelper
     {
         $allowed     = [
             'php', 'html', 'htm', 'js', 'jsx', 'css', 'json', 'md', 'txt', 'svg', 'xml', 'vue',
-            'png', 'jpg', 'jpeg', 'webp', 'ico',
+            'png', 'jpg', 'jpeg', 'gif', 'webp', 'ico',
             'woff', 'woff2', 'ttf', 'otf',
         ];
-        $rasterImages = ['png', 'jpg', 'jpeg', 'webp', 'ico'];
+        $rasterImages = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico'];
         $fontFiles    = ['woff', 'woff2', 'ttf', 'otf'];
         $projectRoot = realpath(Directory::path('app') . '/../') ?: getcwd();
         $srcBase     = realpath($tempDir . '/src');
@@ -223,6 +223,7 @@ trait PluginHelper
         return match ($extension) {
             'png' => str_starts_with($header, "\x89PNG\r\n\x1a\n"),
             'jpg', 'jpeg' => str_starts_with($header, "\xff\xd8\xff"),
+            'gif' => str_starts_with($header, 'GIF87a') || str_starts_with($header, 'GIF89a'),
             'webp' => strlen($header) >= 12
                 && substr($header, 0, 4) === 'RIFF'
                 && substr($header, 8, 4) === 'WEBP',
