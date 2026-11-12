@@ -1490,6 +1490,8 @@ class ConsoleTest extends TestCase
             'image.png' => "\x89PNG\r\n\x1a\nfixture",
             'image.jpg' => "\xff\xd8\xfffixture",
             'image.jpeg' => "\xff\xd8\xfffixture",
+            'image.gif' => 'GIF89a' . str_repeat("\x00", 6),
+            'legacy.gif' => 'GIF87a' . str_repeat("\x00", 6),
             'image.webp' => 'RIFF' . pack('V', 4) . 'WEBP',
             'image.ico' => "\x00\x00\x01\x00fixture",
         ];
@@ -1512,6 +1514,28 @@ class ConsoleTest extends TestCase
 
         $this->assertIsArray($result);
         $this->assertCount(count($fixtures), $result);
+    }
+
+    public function testBuildPlanRejectsGifWithInvalidSignature(): void
+    {
+        $helper = $this->makeHelperInstance();
+        $dir = $this->tmpDir . '/invalid_gif_plugin';
+        mkdir($dir . '/src/assets', 0755, true);
+        file_put_contents($dir . '/src/assets/payload.gif', '<?php echo "unsafe";');
+
+        $manifest = ['files' => [[
+            'src' => 'assets/payload.gif',
+            'dest' => 'assets',
+            'subpath' => 'theme',
+        ]]];
+
+        $result = $this->callHelperMethod(
+            $helper,
+            'buildPlan',
+            [$manifest, $dir, $this->makeNullIo()]
+        );
+
+        $this->assertNull($result);
     }
 
     public function testBuildPlanRejectsRasterImageWithInvalidSignature(): void
