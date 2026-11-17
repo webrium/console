@@ -78,6 +78,8 @@ use Webrium\Console\Plugin\PluginInfo;
 use Webrium\Console\Plugin\PluginNew;
 use Webrium\Console\Plugin\PluginExport;
 use Webrium\Console\Plugin\PluginConfigCompile;
+use Webrium\Console\Plugin\PluginFilesSplit;
+use Webrium\Console\Plugin\PluginFilesMerge;
 
 use Symfony\Component\Console\Application;
 
@@ -136,6 +138,8 @@ $application->add(new PluginInfo());
 $application->add(new PluginNew());
 $application->add(new PluginExport());
 $application->add(new PluginConfigCompile());
+$application->add(new PluginFilesSplit());
+$application->add(new PluginFilesMerge());
 
 // ---------------------------------------------------------------------------
 // Run

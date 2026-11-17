@@ -45,13 +45,20 @@ class PluginRemove extends Command
             return Command::FAILURE;
         }
 
+        $pluginFiles = $this->pluginFiles($plugin);
+        if ($pluginFiles === null && !$keepFiles) {
+            $io->error($this->missingFilesMessage($plugin));
+            return Command::FAILURE;
+        }
+        $pluginFiles ??= [];
+
         $io->title("Removing: {$plugin['name']} v{$plugin['version']}");
 
         if ($keepFiles) {
             $io->writeln('<fg=yellow>--keep-files: files will NOT be deleted from disk.</>');
         } else {
             $io->writeln('<fg=yellow>Files to be deleted:</>');
-            foreach ($plugin['files'] as $file) {
+            foreach ($pluginFiles as $file) {
                 $fileAbs = $this->toAbsolutePath($file);
                 $exists = file_exists($fileAbs) ? '' : ' <fg=gray>(not found)</>';
                 $io->writeln("  <fg=red>✖</> $file$exists");
@@ -68,12 +75,12 @@ class PluginRemove extends Command
 
         // 3. Backup
         if (!$noBackup && !$keepFiles) {
-            $this->backupFiles($plugin['files'], $name, 'removed', $io);
+            $this->backupFiles($pluginFiles, $name, 'removed', $io);
         }
 
         // 4. Delete files
         if (!$keepFiles) {
-            foreach ($plugin['files'] as $file) {
+            foreach ($pluginFiles as $file) {
                 $fileAbs = $this->toAbsolutePath($file);
                 if (file_exists($fileAbs)) {
                     unlink($fileAbs);
@@ -82,7 +89,8 @@ class PluginRemove extends Command
             }
         }
 
-        // 5. Update registry
+        // 5. Update registry (and drop the per-plugin file list, if the plugin had one)
+        $this->deleteFilesFile($plugin);
         $registry['installed'] = array_values(array_filter(
             $registry['installed'],
             fn($p) => $p['name'] !== $name

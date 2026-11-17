@@ -26,6 +26,7 @@ final class PluginConfigCompile extends Command
         'updated_at',
         'hash',
         'files',
+        'files_path',
     ];
 
     protected function configure(): void
@@ -163,6 +164,19 @@ final class PluginConfigCompile extends Command
         $indexes = [];
         foreach ($registry->installed as $index => $plugin) {
             $indexes[$plugin->name] = $index;
+
+            // The compiled file is the complete view used by build tooling, so a
+            // plugin that keeps its file list in a separate file gets it inlined here.
+            if (isset($plugin->files_path) && is_string($plugin->files_path) && $plugin->files_path !== '') {
+                $files = $this->readFilesList($plugin->files_path);
+                if ($files === null) {
+                    $io->error("The file list of plugin '{$plugin->name}' is missing or unreadable: {$plugin->files_path}");
+                    return null;
+                }
+
+                unset($plugin->files_path);
+                $plugin->files = $files;
+            }
         }
 
         foreach (get_object_vars($pluginOverrides) as $name => $override) {
@@ -186,6 +200,25 @@ final class PluginConfigCompile extends Command
         }
 
         return $registry;
+    }
+
+    /** @return list<string>|null */
+    private function readFilesList(string $relativePath): ?array
+    {
+        $normalized = str_replace('\\', '/', $relativePath);
+        if (str_contains($normalized, '../') || !str_ends_with($normalized, '.json')) {
+            return null;
+        }
+
+        $absolute = PluginPathConfig::projectRootPath() . DIRECTORY_SEPARATOR
+            . str_replace('/', DIRECTORY_SEPARATOR, ltrim($normalized, '/'));
+        if (!is_file($absolute)) {
+            return null;
+        }
+
+        $data = json_decode((string) file_get_contents($absolute), true);
+
+        return is_array($data) ? array_values(array_map('strval', $data)) : null;
     }
 
     /**
