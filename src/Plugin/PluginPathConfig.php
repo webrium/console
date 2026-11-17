@@ -19,7 +19,12 @@ final class PluginPathConfig
         'definitions' => 'storage/app/plugins/definitions',
         'dist' => 'storage/app/plugins/dist',
         'backups' => 'storage/app/plugins/backups',
+        'files' => 'storage/app/plugins/files',
     ];
+
+    /** How an installed plugin's file list is stored: inside the registry, or one JSON file per plugin. */
+    public const FILES_STORAGE_INLINE = 'inline';
+    public const FILES_STORAGE_SPLIT = 'split';
 
     /**
      * Resolve every plugin-system path to an absolute path inside the project.
@@ -48,6 +53,15 @@ final class PluginPathConfig
                 . "Configure 'console.plugins.definitions' and 'console.plugins.dist' instead."
             );
             return null;
+        }
+
+        $filesStorage = self::FILES_STORAGE_INLINE;
+        if (property_exists($console, 'files_storage')) {
+            $filesStorage = $console->files_storage;
+            if (!in_array($filesStorage, [self::FILES_STORAGE_INLINE, self::FILES_STORAGE_SPLIT], true)) {
+                $io->error("The 'console.files_storage' value must be \"inline\" or \"split\".");
+                return null;
+            }
         }
 
         if (property_exists($console, 'plugins')) {
@@ -93,14 +107,22 @@ final class PluginPathConfig
             }
         }
 
-        foreach (['definitions', 'dist', 'backups'] as $directoryKey) {
+        foreach (['definitions', 'dist', 'backups', 'files'] as $directoryKey) {
             if (is_file($resolved[$directoryKey])) {
                 $io->error("The 'console.plugins.$directoryKey' path must point to a directory, not a file.");
                 return null;
             }
         }
 
+        $resolved['files_storage'] = $filesStorage;
+
         return $resolved;
+    }
+
+    /** Absolute project root, for resolving project-relative registry paths. */
+    public static function projectRootPath(): string
+    {
+        return rtrim(self::projectRoot(), DIRECTORY_SEPARATOR);
     }
 
     private static function readConfig(string $projectRoot, SymfonyStyle $io): ?\stdClass
