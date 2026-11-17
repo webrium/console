@@ -45,7 +45,7 @@ class PluginList extends Command
                 $plugin['name'],
                 $plugin['version'],
                 $plugin['author']       ?? '-',
-                count($plugin['files'] ?? []),
+                count($this->pluginFiles($plugin) ?? []),
                 $plugin['installed_at'] ?? '-',
                 $plugin['updated_at']   ?? '-',
             ]);
