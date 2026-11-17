@@ -339,6 +339,126 @@ trait PluginHelper
         $io->writeln("<fg=yellow>⚠ Backup saved to:</> $dir");
     }
 
+    /**
+     * The installed file list of a registry entry, wherever it is stored:
+     * inline in `files` (the original layout) or in the per-plugin JSON file
+     * named by `files_path` (project-relative). Returns null when the list is
+     * recorded in `files_path` but that file is missing or unreadable, so the
+     * caller can stop instead of acting on an empty list.
+     *
+     * @return list<string>|null
+     */
+    private function pluginFiles(array $plugin): ?array
+    {
+        if (isset($plugin['files']) && is_array($plugin['files'])) {
+            return array_values($plugin['files']);
+        }
+
+        if (!isset($plugin['files_path']) || !is_string($plugin['files_path']) || $plugin['files_path'] === '') {
+            return [];
+        }
+
+        $absolute = $this->filesPathToAbsolute($plugin['files_path']);
+        if ($absolute === null || !is_file($absolute)) {
+            return null;
+        }
+
+        $data = json_decode((string) file_get_contents($absolute), true);
+
+        return is_array($data) ? array_values(array_map('strval', $data)) : null;
+    }
+
+    /** Error text for a plugin whose `files_path` list cannot be read. */
+    private function missingFilesMessage(array $plugin): string
+    {
+        return "The file list of plugin '{$plugin['name']}' is missing or unreadable: "
+            . ($plugin['files_path'] ?? '(no files_path)')
+            . '. Restore it, or run plugin:files:merge after restoring.';
+    }
+
+    /**
+     * Applies the configured storage mode to a registry entry's file list.
+     * `split` writes it to `files/{name}.json` and keeps only `files_path` in
+     * the entry; `inline` keeps `files` in the entry and removes any leftover
+     * per-plugin file. The entry is returned with exactly one of the two keys.
+     *
+     * @param list<string> $files
+     */
+    private function withStoredFiles(array $entry, string $name, array $files): array
+    {
+        $split = ($this->pluginPaths['files_storage'] ?? PluginPathConfig::FILES_STORAGE_INLINE)
+            === PluginPathConfig::FILES_STORAGE_SPLIT;
+
+        if (!$split) {
+            $this->deleteFilesFile($entry);
+            unset($entry['files_path']);
+
+            return $this->placeBeforeMeta($entry, 'files', $files);
+        }
+
+        $relative = $this->toRelativePath($this->pluginPaths['files'] . DIRECTORY_SEPARATOR . $name . '.json');
+        $relative = str_replace('\\', '/', $relative);
+        $absolute = $this->toAbsolutePath($relative);
+
+        @mkdir(dirname($absolute), 0755, true);
+        file_put_contents(
+            $absolute,
+            json_encode(array_values($files), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . PHP_EOL,
+            LOCK_EX
+        );
+
+        unset($entry['files']);
+
+        return $this->placeBeforeMeta($entry, 'files_path', $relative);
+    }
+
+    /** Sets $key in place when it exists, otherwise inserts it just before `meta` so registry diffs stay small. */
+    private function placeBeforeMeta(array $entry, string $key, mixed $value): array
+    {
+        if (array_key_exists($key, $entry) || !array_key_exists('meta', $entry)) {
+            $entry[$key] = $value;
+
+            return $entry;
+        }
+
+        $result = [];
+        foreach ($entry as $k => $v) {
+            if ($k === 'meta') {
+                $result[$key] = $value;
+            }
+            $result[$k] = $v;
+        }
+
+        return $result;
+    }
+
+    /** Deletes the per-plugin file list a registry entry points to, if any. */
+    private function deleteFilesFile(array $plugin): void
+    {
+        if (!isset($plugin['files_path']) || !is_string($plugin['files_path'])) {
+            return;
+        }
+
+        $absolute = $this->filesPathToAbsolute($plugin['files_path']);
+        if ($absolute !== null && is_file($absolute)) {
+            @unlink($absolute);
+        }
+    }
+
+    /** Resolves a `files_path` to an absolute path, refusing anything outside the project root or not a .json file. */
+    private function filesPathToAbsolute(string $path): ?string
+    {
+        $normalized = str_replace('\\', '/', $path);
+        if (str_contains($normalized, '../') || !str_ends_with($normalized, '.json')) {
+            return null;
+        }
+
+        $absolute = $this->toAbsolutePath($normalized);
+        $root = $this->projectRoot() . DIRECTORY_SEPARATOR;
+
+        return str_starts_with($absolute, $root) ? $absolute : null;
+    }
+
     private function pluginPath(string $key): string
     {
         if ($this->pluginPaths === null) {
