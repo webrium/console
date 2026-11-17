@@ -39,6 +39,7 @@ composer require webrium/console
 | `plugin:new` | Create a plugin authoring definition |
 | `plugin:export` | Export a distributable plugin package |
 | `plugin:config:compile` | Compile the plugin registry with project overrides |
+| `plugin:files:split` / `plugin:files:merge` | Store plugin file lists in separate files, or back inline |
 
 ---
 
@@ -534,6 +535,34 @@ The compiled file is derived cache data and should not be committed.
 For full documentation on creating and distributing plugins, see the **[Plugin System Wiki](https://github.com/webrium/console/wiki/webrium-plugin-system)**.
 
 ---
+
+### Where the installed file list is stored
+
+Every registry entry records the files the plugin installed (used by `plugin:update`, `plugin:remove` and export tooling, not at runtime). By default the list sits inline in `plugins.json` as `files`. For projects with many plugins, that list is most of the registry, and the registry is read on every request, so it can instead be kept in one small JSON file per plugin, referenced by `files_path`:
+
+```json
+{ "name": "cms", "version": "1.0.0", "files_path": "storage/app/plugins/files/cms.json", "meta": {} }
+```
+
+Choose what new installs and updates write in `.webrium.conf.json`:
+
+```json
+{ "console": { "files_storage": "split" } }
+```
+
+`"inline"` (the default) keeps the current layout; `"split"` writes `storage/app/plugins/files/{name}.json` (change the directory with `console.plugins.files`). An entry has either `files` or `files_path`, never both, and both layouts can coexist in one registry. An update rewrites the entry in whichever layout is configured, so plugins migrate as they are updated.
+
+| Command | Effect |
+| --- | --- |
+| `plugin:files:split [--dry-run]` | Move every inline `files` list into its own file |
+| `plugin:files:merge [--dry-run]` | Move every `files_path` list back inline |
+
+Notes:
+
+- `plugin:update` and `plugin:remove` stop with an error if a `files_path` file is missing, instead of acting on an empty list (`plugin:remove --keep-files` still works).
+- `plugin:config:compile` writes the complete view: it inlines each `files_path` list as `files` in the compiled file, so build tooling that reads `files` from the compiled registry keeps working. A missing list file fails the compile.
+- A `files_path` must be a project-relative `.json` path without `..`.
+- Register `PluginFilesSplit` and `PluginFilesMerge` in your project's `webrium` entry script, like the other plugin commands.
 
 ## License
 
