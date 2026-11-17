@@ -158,7 +158,7 @@ class PluginInstall extends Command
         }
 
         // 14. Register
-        $registry['installed'][] = [
+        $registry['installed'][] = $this->withStoredFiles([
             'status' => 'active',  // disabled or active
             'name'         => $manifest['name'],
             'version'      => $manifest['version'],
@@ -166,9 +166,8 @@ class PluginInstall extends Command
             'author'       => $manifest['author'] ?? '',
             'installed_at' => date('Y-m-d H:i:s'),
             'hash'         => $zipHash,
-            'files'        => $installed,
             'meta'         => $manifest['meta'] ?? [],
-        ];
+        ], $manifest['name'], $installed);
 
         $this->saveRegistry($registry);
 
