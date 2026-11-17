@@ -98,6 +98,13 @@ class PluginUpdate extends Command
         $io->writeln('');
         $this->printHash($zipPath, $io);
 
+        $existingFiles = $this->pluginFiles($existing);
+        if ($existingFiles === null) {
+            $io->error($this->missingFilesMessage($existing));
+            $this->cleanupTemp($tempDir, $zipPath, $source);
+            return Command::FAILURE;
+        }
+
         // 8. Build plan
         $plan = $this->buildPlan($manifest, $tempDir, $io);
         if ($plan === null) {
@@ -113,7 +120,7 @@ class PluginUpdate extends Command
 
         // 10. Backup current files
         if (!$noBackup) {
-            $this->backupFiles($existing['files'], $manifest['name'], "v{$currentVersion}", $io);
+            $this->backupFiles($existingFiles, $manifest['name'], "v{$currentVersion}", $io);
         }
 
         // 11. Remove obsolete files (in old install but not in new plan)
@@ -121,7 +128,7 @@ class PluginUpdate extends Command
             fn($entry) => $this->normalizeRegistryPath($this->toRelativePath($entry['dest'])),
             $plan
         );
-        foreach ($existing['files'] as $oldFile) {
+        foreach ($existingFiles as $oldFile) {
             $oldFileAbs = $this->toAbsolutePath($oldFile);
             $oldRegistryPath = $this->normalizeRegistryPath($this->toRelativePath($oldFileAbs));
             if (!in_array($oldRegistryPath, $newInstalledPaths, true) && file_exists($oldFileAbs)) {
@@ -159,9 +166,9 @@ class PluginUpdate extends Command
             'installed_at' => $existing['installed_at'] ?? date('Y-m-d H:i:s'),
             'updated_at'   => date('Y-m-d H:i:s'),
             'hash'         => $zipHash,
-            'files'        => $installed,
             'meta'         => $manifest['meta'] ?? [],
         ]);
+        $updatedPlugin = $this->withStoredFiles($updatedPlugin, $manifest['name'], $installed);
 
         foreach ($registry['installed'] as $index => $plugin) {
             if ($plugin['name'] === $manifest['name']) {
